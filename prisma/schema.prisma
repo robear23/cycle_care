@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int      @id @default(autoincrement())
+  telegram_chat_id  String   @unique
+  partner_name      String?
+  cycle_start_date  DateTime
+  cycle_length      Int      @default(28)
+  period_duration   Int      @default(5)
+  notification_time String   @default("08:00")
+  timezone          String   @default("UTC")
+  subscription_status String @default("trial") // trial, active, paused, cancelled
+  stripe_customer_id String?
+  referral_code     String?  @unique
+  referred_by       String?
+  trial_ends_at     DateTime?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  message_logs      MessageLog[]
+}
+
+model Message {
+  id            Int      @id @default(autoincrement())
+  phase         String   // menstrual, follicular, ovulation, luteal, general
+  message_text  String
+  tone          String?  // supportive, energetic, romantic, calm
+  created_at    DateTime @default(now())
+  message_logs  MessageLog[]
+}
+
+model MessageLog {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id])
+  message_id Int
+  message    Message  @relation(fields: [message_id], references: [id])
+  sent_at    DateTime @default(now())
+}
