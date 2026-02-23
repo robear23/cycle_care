@@ -7,14 +7,8 @@ const apiRoutes = require('./api/routes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware for parsing JSON (except for Stripe webhook which needs raw)
-app.use((req, res, next) => {
-    if (req.originalUrl === '/webhook/stripe') {
-        next();
-    } else {
-        express.json()(req, res, next);
-    }
-});
+// Middleware for parsing JSON
+app.use(express.json());
 
 app.use('/', apiRoutes);
 

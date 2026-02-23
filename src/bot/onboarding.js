@@ -81,7 +81,7 @@ async function handleOnboarding(bot, msg) {
                         cycle_start_date: state.data.cycleStartDate,
                         notification_time: state.data.notificationTime,
                         timezone: state.data.timezone,
-                        subscription_status: 'trial'
+                        subscription_status: 'active'
                     },
                     create: {
                         telegram_chat_id: chatId,
@@ -89,15 +89,12 @@ async function handleOnboarding(bot, msg) {
                         cycle_start_date: state.data.cycleStartDate,
                         notification_time: state.data.notificationTime,
                         timezone: state.data.timezone,
-                        subscription_status: 'trial'
+                        subscription_status: 'active'
                     }
                 });
 
-                await bot.sendMessage(chatId, "Great! You're all set up for the trial.");
+                await bot.sendMessage(chatId, "Great! You're all set up.");
                 await bot.sendMessage(chatId, "Starting tomorrow, I'll send you a daily message.");
-                // TODO: Send Stripe Link here
-                const stripeLink = process.env.STRIPE_PAYMENT_LINK || "https://stripe.com/test-link";
-                await bot.sendMessage(chatId, `To continue after your trial, please subscribe here: ${stripeLink}`);
 
                 onboardingState.delete(chatId);
             } catch (e) {

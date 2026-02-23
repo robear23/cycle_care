@@ -16,11 +16,9 @@ model User {
   period_duration   Int      @default(5)
   notification_time String   @default("08:00")
   timezone          String   @default("UTC")
-  subscription_status String @default("trial") // trial, active, paused, cancelled
-  stripe_customer_id String?
+  subscription_status String @default("active") // active, paused, cancelled
   referral_code     String?  @unique
   referred_by       String?
-  trial_ends_at     DateTime?
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
   message_logs      MessageLog[]

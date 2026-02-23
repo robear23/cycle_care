@@ -83,18 +83,7 @@ async function handleSubscription(bot, msg) {
 
     if (!user) return;
 
-    const status = user.subscription_status.toUpperCase();
-    let text = `Your subscription status: *${status}*\n`;
-
-    if (status === 'TRIAL') {
-        text += "You are on the free trial.";
-    } else if (status === 'ACTIVE') {
-        text += "Thank you for supporting CycleCare!";
-    }
-
-    // In a real app, generate a Stripe Customer Portal link here
-    const portalLink = "https://billing.stripe.com/p/login/YOUR_PORTAL_ID";
-    text += `\n\n[Manage Subscription](${portalLink})`;
+    let text = `Your subscription status: *ACTIVE*\n\nCycleCare is a free tool! You have full lifetime access.`;
 
     await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
 }
