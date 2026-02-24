@@ -17,9 +17,31 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/', apiRoutes);
 
-app.post('/api/waitlist', (req, res) => {
+const mailchimp = require('@mailchimp/mailchimp_marketing');
+
+mailchimp.setConfig({
+    apiKey: process.env.MAILCHIMP_API_KEY,
+    server: process.env.MAILCHIMP_SERVER_PREFIX, // e.g., 'us21'
+});
+
+app.post('/api/waitlist', async (req, res) => {
     const email = req.body.email;
     console.log(`[New Lead Captured] Email: ${email}`);
+
+    try {
+        if (process.env.MAILCHIMP_API_KEY && process.env.MAILCHIMP_AUDIENCE_ID) {
+            await mailchimp.lists.addListMember(process.env.MAILCHIMP_AUDIENCE_ID, {
+                email_address: email,
+                status: "subscribed",
+            });
+            console.log(`Successfully added ${email} to Mailchimp Audience.`);
+        } else {
+            console.warn("Mailchimp credentials not found. Email was not saved to Mailchimp.");
+        }
+    } catch (error) {
+        console.error(`Failed to add ${email} to Mailchimp:`, error.response?.body || error.message);
+    }
+
     // Automatically redirect the user to the Telegram Bot
     res.redirect('https://t.me/cycle_care_bot');
 });
