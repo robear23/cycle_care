@@ -41,3 +41,9 @@ model MessageLog {
   message    Message  @relation(fields: [message_id], references: [id])
   sent_at    DateTime @default(now())
 }
+
+model WaitlistLead {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  created_at DateTime @default(now())
+}
