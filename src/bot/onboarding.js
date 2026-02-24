@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const chrono = require('chrono-node');
 
 // In-memory state for onboarding: { [chatId]: { step: 'name' | 'date' | 'time' | 'timezone', data: {} } }
 const onboardingState = new Map();
@@ -42,13 +43,14 @@ async function handleOnboarding(bot, msg) {
             break;
 
         case STEPS.DATE:
-            // Basic date parsing
-            const date = new Date(text);
-            if (isNaN(date.getTime())) {
-                await bot.sendMessage(chatId, "I couldn't understand that date. Please try again (e.g. '14 Feb' or 'YYYY-MM-DD').");
+            // Natural language date parsing
+            const parsedDate = chrono.parseDate(text);
+
+            if (!parsedDate) {
+                await bot.sendMessage(chatId, "I couldn't understand that date. Please try again (e.g. '14 Feb', 'last tuesday', or 'YYYY-MM-DD').");
                 return;
             }
-            state.data.cycleStartDate = date;
+            state.data.cycleStartDate = parsedDate;
             state.step = STEPS.TIME;
             onboardingState.set(chatId, state);
             await bot.sendMessage(chatId, "What time would you like your daily message? (Default is 8AM — just type a time like '09:00' or '9pm', or type 'skip')");
