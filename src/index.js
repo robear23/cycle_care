@@ -1,11 +1,15 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const { initBot, bot } = require('./bot/index');
 const { startScheduler } = require('./scheduler/daily');
 const apiRoutes = require('./api/routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Serve static assets from public directory
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Middleware for parsing JSON
 app.use(express.json());
