@@ -11,10 +11,18 @@ const PORT = process.env.PORT || 3000;
 // Serve static assets from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Middleware for parsing JSON
+// Middleware for parsing JSON and form data
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use('/', apiRoutes);
+
+app.post('/api/waitlist', (req, res) => {
+    const email = req.body.email;
+    console.log(`[New Lead Captured] Email: ${email}`);
+    // Automatically redirect the user to the Telegram Bot
+    res.redirect('https://t.me/cycle_care_bot');
+});
 
 const { checkCycleReminders, handleReminderCallbacks } = require('./scheduler/reminders');
 const cron = require('node-cron');

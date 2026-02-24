@@ -32,14 +32,18 @@
             <h1>Never guess your partner's cycle again.</h1>
             <p>A quiet, automated Telegram assistant that gives you the heads-up exactly when you need it. Support them
                 better without the guesswork.</p>
-            <div class="cta-container">
-                <a href="https://t.me/cycle_care_bot" class="cta-button" target="_blank" rel="noopener noreferrer">
-                    Open in Telegram
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </a>
+            <div class="hero-cta-container">
+                <form action="/api/waitlist" method="POST" class="hero-email-form">
+                    <input type="email" name="email" placeholder="Enter your email address to begin" required>
+                    <button type="submit">
+                        Open in Telegram
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                </form>
+                <p class="hero-note">No spam. We'll instantly redirect you to CycleCare.</p>
             </div>
         </div>
 
@@ -61,18 +65,7 @@
             </div>
         </div>
 
-        <div class="email-container">
-            <h3>Stay in the loop</h3>
-            <p style="font-size: 1rem; color: var(--text-secondary);">Get early access to new features, updates, and
-                more. No spam ever.</p>
-            <!-- Form visually handled, connect 'action' to Formspree, Mailchimp, etc later -->
-            <form class="email-form"
-                onsubmit="event.preventDefault(); alert('Thanks for subscribing! We\'ll be in touch.'); this.reset();">
-                <input type="email" name="email" placeholder="Enter your email address" required>
-                <button type="submit">Subscribe</button>
-            </form>
-            <p class="email-note">Unsubscribe at any time.</p>
-        </div>
+
     </main>
 
     <footer>
