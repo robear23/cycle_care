@@ -48,7 +48,8 @@ async function sendDailyMessage(user) {
     const message = await getDailyMessage(user.id, phase);
 
     if (message) {
-        const text = message.message_text.replace('[Partner]', user.partner_name || 'your partner');
+        const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
+        const text = `Day ${day} — ` + message.message_text.replace('[Partner]', partnerName);
 
         try {
             await bot.sendMessage(user.telegram_chat_id, text);

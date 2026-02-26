@@ -31,7 +31,8 @@ async function handleToday(bot, msg) {
         // We can fetch all IDs and pick one.
     });
 
-    const text = message ? message.message_text.replace('[Partner]', user.partner_name || 'your partner') : "No message found for today.";
+    const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
+    const text = message ? `Day ${day} — ` + message.message_text.replace('[Partner]', partnerName) : "No message found for today.";
 
     await bot.sendMessage(chatId, text);
 }
