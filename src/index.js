@@ -65,7 +65,6 @@ app.post('/api/waitlist', async (req, res) => {
                         <p>Everything is completely automated! When your bot estimates that a new cycle is beginning, it will proactively send you a quick message asking to confirm if her period started. You just tap "Yes" or "Not Yet", and the bot recalculates automatically.</p>
                         <p><em>(Nature can be unpredictable! If her cycle restarts early, you can explicitly reset the timeline at any point just by typing <code>/update</code> to the bot!)</em></p>
                         
-                        <p>Talk to you tomorrow!</p>
                         <p>Best,<br><strong>The Team at ForestTech Solutions</strong><br>
                         <a href="https://foresttechsolutions.net" style="color: #6366f1;">foresttechsolutions.net</a></p>
                     </div>
