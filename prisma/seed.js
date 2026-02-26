@@ -8,7 +8,7 @@ const messages = [
     { phase: 'menstrual', message_text: "Menstrual days can feel heavy — energy is low and emotions can run close to the surface. Just being patient and present is genuinely enough today." },
 
     // Follicular
-    { phase: 'follicular', message_text: "[Partner] is in the follicular phase — energy levels tend to rise and mood often lifts. A great time to suggest something fun or make plans together." },
+    { phase: 'follicular', message_text: "[Partner] is in her follicular phase — energy levels tend to rise and mood often lifts. A great time to suggest something fun or make plans together." },
     { phase: 'follicular', message_text: "Good energy day for [Partner]. If you've been meaning to plan something — a date night, a weekend trip, a new restaurant — bring it up today." },
 
     // Ovulation
