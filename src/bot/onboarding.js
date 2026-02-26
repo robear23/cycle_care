@@ -57,13 +57,16 @@ async function handleOnboarding(bot, msg) {
             break;
 
         case STEPS.TIME:
-            // Basic time parsing (needs to be robust, ideally store as HH:MM)
+            // Basic time parsing
             let time = "08:00";
             if (text.toLowerCase() !== 'skip') {
-                // Simple regex or library could be used. For MVP let's trust the user or simple parse
-                // Let's assume HH:MM 24h format for simplicity or minimal parsing
-                // This is a "todo" to make robust.
-                time = text; // validation logic would go here
+                const parsedTime = chrono.parseDate(text);
+                if (parsedTime) {
+                    time = ('0' + parsedTime.getHours()).slice(-2) + ':' + ('0' + parsedTime.getMinutes()).slice(-2);
+                } else {
+                    await bot.sendMessage(chatId, "I couldn't understand that time. Please try again (e.g., '8am', '09:00', '9pm', or 'skip').");
+                    return;
+                }
             }
             state.data.notificationTime = time;
             state.step = STEPS.TIMEZONE;
