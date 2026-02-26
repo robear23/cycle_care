@@ -9,7 +9,7 @@ const { Resend } = require('resend');
 
 const app = express();
 const prisma = new PrismaClient();
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const PORT = process.env.PORT || 3000;
 
