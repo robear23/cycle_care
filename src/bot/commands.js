@@ -20,7 +20,7 @@ async function handleToday(bot, msg) {
         return;
     }
 
-    const { phase, day } = calculatePhase(user.cycle_start_date, user.cycle_length);
+    const { phase, day, fertility } = calculatePhase(user.cycle_start_date, user.cycle_length);
 
     // Fetch a message for this phase
     // For MVP, just picking one random message from DB
@@ -32,7 +32,7 @@ async function handleToday(bot, msg) {
     });
 
     const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
-    const text = message ? `Day ${day} — ` + message.message_text.replace('[Partner]', partnerName) : "No message found for today.";
+    const text = message ? `Day ${day} • Fertility: ${fertility}\n\n` + message.message_text.replace('[Partner]', partnerName) : "No message found for today.";
 
     await bot.sendMessage(chatId, text);
 }

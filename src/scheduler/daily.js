@@ -44,12 +44,12 @@ function startScheduler() {
 }
 
 async function sendDailyMessage(user) {
-    const { phase, day } = calculatePhase(user.cycle_start_date, user.cycle_length);
+    const { phase, day, fertility } = calculatePhase(user.cycle_start_date, user.cycle_length);
     const message = await getDailyMessage(user.id, phase);
 
     if (message) {
         const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
-        const text = `Day ${day} — ` + message.message_text.replace('[Partner]', partnerName);
+        const text = `Day ${day} • Fertility: ${fertility}\n\n` + message.message_text.replace('[Partner]', partnerName);
 
         try {
             await bot.sendMessage(user.telegram_chat_id, text);

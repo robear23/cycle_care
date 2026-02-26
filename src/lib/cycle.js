@@ -118,10 +118,15 @@ function calculatePhase(cycleStartDate, cycleLength = 28, targetDate = new Date(
         else if (currentDay >= 17 && currentDay <= 28) phase = 'luteal';
     }
 
+    let fertility = 'Low';
+    if (phase === 'ovulation') fertility = 'High';
+    else if (phase === 'follicular') fertility = 'Medium';
+
     return {
         phase,
         day: currentDay,
-        daysUntilNextPeriod: cycleLength - currentDay + 1
+        daysUntilNextPeriod: cycleLength - currentDay + 1,
+        fertility: fertility
     };
 }
 
