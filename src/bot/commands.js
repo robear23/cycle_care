@@ -4,11 +4,30 @@ const { calculatePhase } = require('../lib/cycle');
 
 async function handleUpdate(bot, msg) {
     const chatId = msg.chat.id.toString();
-    // Logic to update cycle start date
-    await bot.sendMessage(chatId, "Please enter your new cycle start date (YYYY-MM-DD):");
-    // This needs state management to know the next message is the date.
-    // For MVP, maybe just simple command args? /update 2023-10-27
-    // Or reuse the onboarding state mechanism with a different 'mode'.
+    const user = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
+
+    if (!user) {
+        await bot.sendMessage(chatId, "You need to sign up first! Send /start.");
+        return;
+    }
+
+    const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
+
+    const opts = {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: 'Yes, started today', callback_data: `period_start_today` },
+                    { text: 'Yes, yesterday', callback_data: `period_start_yesterday` }
+                ],
+                [
+                    { text: 'Cancel', callback_data: `period_not_yet` }
+                ]
+            ]
+        }
+    };
+
+    await bot.sendMessage(chatId, `When did ${partnerName}'s new cycle start?`, opts);
 }
 
 async function handleToday(bot, msg) {
