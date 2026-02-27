@@ -3,46 +3,40 @@ const { PrismaClient } = require('@prisma/client');
 const { bot } = require('../bot/index');
 const prisma = new PrismaClient();
 
-async function checkCycleReminders() {
-    console.log('Running cycle reminders check...');
+async function checkUserCycleReminder(user) {
+    // We expect this to run once a day per user, right around their notification time.
+    const cycleStart = new Date(user.cycle_start_date);
+    const now = new Date();
 
-    // Find users who are late in their cycle (e.g. Current Day >= Cycle Length)
-    // We need to calculate this.
-    // Ideally, we do this once a day.
+    // specific logic: diff in days
+    const diffTime = now.getTime() - cycleStart.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    const users = await prisma.user.findMany({
-        where: { subscription_status: { in: ['trial', 'active'] } }
-    });
+    // For better accuracy, we can also use calculatePhase logic, but diffDays is fine here.
+    // If today is exactly Cycle Length, ask if period started.
+    if (diffDays === user.cycle_length) {
+        const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
 
-    for (const user of users) {
-        const cycleStart = new Date(user.cycle_start_date);
-        const now = new Date();
-
-        // specific logic: diff in days
-        const diffTime = now.getTime() - cycleStart.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        // Logic: If today is exactly Cycle Length + 1, ask if period started.
-        // Or Day 28 (if average). 
-        // Let's go with Day = Cycle Length.
-
-        if (diffDays === user.cycle_length) {
-            // Send interactive message
-            const opts = {
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: 'Yes, started today', callback_data: `period_start_today` },
-                            { text: 'Yes, yesterday', callback_data: `period_start_yesterday` }
-                        ],
-                        [
-                            { text: 'Not yet', callback_data: `period_not_yet` }
-                        ]
+        // Send interactive message
+        const opts = {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: 'Yes, started today', callback_data: `period_start_today` },
+                        { text: 'Yes, yesterday', callback_data: `period_start_yesterday` }
+                    ],
+                    [
+                        { text: 'Not yet', callback_data: `period_not_yet` }
                     ]
-                }
-            };
+                ]
+            }
+        };
 
-            await bot.sendMessage(user.telegram_chat_id, `Hey! According to your settings, [Partner]'s period might be due around now. Has it started?`.replace('[Partner]', user.partner_name || 'your partner'), opts);
+        try {
+            await bot.sendMessage(user.telegram_chat_id, `Hey! According to your settings, ${partnerName}'s period might be due around now. Has it started?`, opts);
+            console.log(`Sent cycle end reminder to user ${user.id}`);
+        } catch (e) {
+            console.error(`Failed to send cycle reminder to user ${user.id}`, e);
         }
     }
 }
@@ -84,4 +78,4 @@ function handleReminderCallbacks(bot) {
     });
 }
 
-module.exports = { checkCycleReminders, handleReminderCallbacks };
+module.exports = { checkUserCycleReminder, handleReminderCallbacks };

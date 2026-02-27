@@ -81,9 +81,7 @@ app.post('/api/waitlist', async (req, res) => {
     // Automatically redirect the user to the Telegram Bot
     res.redirect('https://t.me/cycle_care_bot');
 });
-
-const { checkCycleReminders, handleReminderCallbacks } = require('./scheduler/reminders');
-const cron = require('node-cron');
+const { handleReminderCallbacks } = require('./scheduler/reminders');
 
 async function main() {
     // Start Bot
@@ -92,11 +90,6 @@ async function main() {
 
     // Start Scheduler
     startScheduler();
-
-    // Schedule Cycle Reminders (Run daily at 9 PM UTC)
-    cron.schedule('0 21 * * *', () => {
-        checkCycleReminders();
-    });
 
     // Start Server
     app.listen(PORT, () => {

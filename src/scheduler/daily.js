@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const { calculatePhase } = require('../lib/cycle');
 const { getDailyMessage } = require('../lib/messages');
 const { bot } = require('../bot/index');
+const { checkUserCycleReminder } = require('./reminders');
 
 const prisma = new PrismaClient();
 
@@ -62,6 +63,9 @@ async function sendDailyMessage(user) {
                 }
             });
             console.log(`Sent message to user ${user.id}`);
+
+            // Check if we also need to append a cycle-end reminder
+            await checkUserCycleReminder(user);
         } catch (e) {
             console.error(`Failed to send to user ${user.id}`, e);
         }
