@@ -1,6 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const chrono = require('chrono-node');
+const { DateTime } = require('luxon');
+const cityTimezones = require('city-timezones');
 
 // In-memory state for onboarding: { [chatId]: { step: 'name' | 'date' | 'time' | 'timezone', data: {} } }
 const onboardingState = new Map();
@@ -75,7 +77,26 @@ async function handleOnboarding(bot, msg) {
             break;
 
         case STEPS.TIMEZONE:
-            state.data.timezone = text;
+            let tzToSave = text.trim();
+            let isValid = DateTime.utc().setZone(tzToSave).isValid;
+
+            if (!isValid) {
+                // Try fuzzy matching via city name
+                const cityMatches = cityTimezones.lookupViaCity(tzToSave);
+                if (cityMatches && cityMatches.length > 0) {
+                    // Sort by highest population to prioritize major cities first
+                    cityMatches.sort((a, b) => (b.pop || 0) - (a.pop || 0));
+                    tzToSave = cityMatches[0].timezone;
+                    isValid = DateTime.utc().setZone(tzToSave).isValid;
+                }
+            }
+
+            if (!isValid) {
+                await bot.sendMessage(chatId, "I couldn't find that timezone or city. Please try typing a major city nearby (e.g., 'London', 'New York', 'Paris', or 'Tokyo').");
+                return;
+            }
+
+            state.data.timezone = tzToSave;
 
             // Save to DB
             try {
@@ -98,8 +119,8 @@ async function handleOnboarding(bot, msg) {
                     }
                 });
 
-                await bot.sendMessage(chatId, "Great! You're all set up.");
-                await bot.sendMessage(chatId, "Starting tomorrow, I'll send you a daily message.");
+                await bot.sendMessage(chatId, `Great! You're all set up.\nI've saved your timezone as ${tzToSave}.`);
+                await bot.sendMessage(chatId, `Starting tomorrow morning, I'll send you a brief message.`);
 
                 onboardingState.delete(chatId);
             } catch (e) {
