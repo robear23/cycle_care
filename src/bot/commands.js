@@ -51,7 +51,8 @@ async function handleToday(bot, msg) {
     });
 
     const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
-    const text = message ? `Day ${day} • Fertility: ${fertility}\n\n` + message.message_text.replace('[Partner]', partnerName) : "No message found for today.";
+    const displayPhase = phase.charAt(0).toUpperCase() + phase.slice(1);
+    const text = message ? `Day ${day} • ${displayPhase} • Fertility: ${fertility}\n\n` + message.message_text.replace('[Partner]', partnerName) : "No message found for today.";
 
     await bot.sendMessage(chatId, text);
 }

@@ -50,7 +50,8 @@ async function sendDailyMessage(user) {
 
     if (message) {
         const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
-        const text = `Day ${day} • Fertility: ${fertility}\n\n` + message.message_text.replace('[Partner]', partnerName);
+        const displayPhase = phase.charAt(0).toUpperCase() + phase.slice(1);
+        const text = `Day ${day} • ${displayPhase} • Fertility: ${fertility}\n\n` + message.message_text.replace('[Partner]', partnerName);
 
         try {
             await bot.sendMessage(user.telegram_chat_id, text);
