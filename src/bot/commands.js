@@ -50,9 +50,13 @@ async function handleToday(bot, msg) {
         // We can fetch all IDs and pick one.
     });
 
-    const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
+    const rawPartnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : null;
     const displayPhase = phase.charAt(0).toUpperCase() + phase.slice(1);
-    const text = message ? `Day ${day} • ${displayPhase} • Fertility: ${fertility}\n\n` + message.message_text.replace('[Partner]', partnerName) : "No message found for today.";
+    const body = message ? message.message_text.replace(/\[Partner\]/g, (match, offset) => {
+        if (rawPartnerName) return rawPartnerName;
+        return offset === 0 ? 'Your partner' : 'your partner';
+    }) : null;
+    const text = body ? `Day ${day} • ${displayPhase} • Fertility: ${fertility}\n\n` + body : "No message found for today.";
 
     await bot.sendMessage(chatId, text);
 }
