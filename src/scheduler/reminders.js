@@ -13,8 +13,10 @@ async function checkUserCycleReminder(user) {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     // For better accuracy, we can also use calculatePhase logic, but diffDays is fine here.
-    // If today is exactly Cycle Length, ask if period started.
-    if (diffDays === user.cycle_length) {
+    // Fire reminder window: from cycle_length_min through cycle_length_max (or cycle_length if no range)
+    const windowStart = user.cycle_length_min || user.cycle_length;
+    const windowEnd = user.cycle_length_max || user.cycle_length;
+    if (diffDays >= windowStart && diffDays <= windowEnd) {
         const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
 
         // Send interactive message

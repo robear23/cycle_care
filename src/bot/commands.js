@@ -1,6 +1,10 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { calculatePhase } = require('../lib/cycle');
+const { parseCycleRange } = require('./onboarding');
+
+// In-memory state for /cyclelength command: { [chatId]: true }
+const cycleLengthState = new Map();
 
 async function handleUpdate(bot, msg) {
     const chatId = msg.chat.id.toString();
@@ -132,10 +136,65 @@ async function handleRefer(bot, msg) {
     await bot.sendMessage(chatId, `Here is your referral link:\n${link}\n\nShare this to give friends a 14-day trial!`);
 }
 
+async function handleCycleLength(bot, msg) {
+    const chatId = msg.chat.id.toString();
+    const user = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
+
+    if (!user) {
+        await bot.sendMessage(chatId, "You need to sign up first! Send /start.");
+        return;
+    }
+
+    const hasRange = user.cycle_length_min && user.cycle_length_max && user.cycle_length_min !== user.cycle_length_max;
+    const current = hasRange
+        ? `${user.cycle_length_min}–${user.cycle_length_max} days (average: ${user.cycle_length})`
+        : `${user.cycle_length} days`;
+
+    cycleLengthState.set(chatId, true);
+    await bot.sendMessage(chatId, `Current cycle length: ${current}\n\nEnter a new cycle length — a single number or a range (e.g. '28' or '28-34'). Type 'cancel' to keep the current setting.`);
+}
+
+async function handleCycleLengthMessage(bot, msg) {
+    const chatId = msg.chat.id.toString();
+    if (!cycleLengthState.has(chatId)) return false;
+
+    const text = msg.text.trim();
+
+    if (text.toLowerCase() === 'cancel') {
+        cycleLengthState.delete(chatId);
+        await bot.sendMessage(chatId, "No changes made.");
+        return true;
+    }
+
+    const cycleRange = parseCycleRange(text);
+    if (!cycleRange) {
+        await bot.sendMessage(chatId, "I couldn't understand that. Please enter a number or range like '28' or '28-34' (between 14 and 60), or type 'cancel'.");
+        return true;
+    }
+
+    await prisma.user.update({
+        where: { telegram_chat_id: chatId },
+        data: {
+            cycle_length: cycleRange.avg,
+            cycle_length_min: cycleRange.min,
+            cycle_length_max: cycleRange.max
+        }
+    });
+
+    cycleLengthState.delete(chatId);
+
+    const rangeDisplay = cycleRange.min === cycleRange.max
+        ? `${cycleRange.min} days`
+        : `${cycleRange.min}–${cycleRange.max} days (average: ${cycleRange.avg})`;
+    await bot.sendMessage(chatId, `Cycle length updated to ${rangeDisplay}.`);
+    return true;
+}
+
 async function handleHelp(bot, msg) {
     const helpText = `
 /start - Start onboarding
 /update - Update cycle start date
+/cyclelength - View or update cycle length range
 /today - Get today's message
 /phase - Get current phase info
 /learn - Learn about cycle phases
@@ -153,5 +212,7 @@ module.exports = {
     handleHelp,
     handleLearn,
     handleSubscription,
-    handleRefer
+    handleRefer,
+    handleCycleLength,
+    handleCycleLengthMessage
 };

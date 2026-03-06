@@ -13,6 +13,8 @@ model User {
   partner_name      String?
   cycle_start_date  DateTime
   cycle_length      Int      @default(28)
+  cycle_length_min  Int?
+  cycle_length_max  Int?
   period_duration   Int      @default(5)
   notification_time String   @default("08:00")
   timezone          String   @default("UTC")

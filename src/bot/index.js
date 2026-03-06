@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { handleOnboarding, onboardingState } = require('./onboarding');
-const { handleToday, handlePhase, handleHelp, handleLearn, handleSubscription, handleRefer } = require('./commands');
+const { handleToday, handlePhase, handleHelp, handleLearn, handleSubscription, handleRefer, handleCycleLength, handleCycleLengthMessage } = require('./commands');
 
 // Initialize bot
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -17,6 +17,7 @@ function initBot() {
         handleOnboarding(bot, msg);
     });
 
+    bot.onText(/\/cyclelength/, (msg) => handleCycleLength(bot, msg));
     bot.onText(/\/today/, (msg) => handleToday(bot, msg));
     bot.onText(/\/phase/, (msg) => handlePhase(bot, msg));
     bot.onText(/\/help/, (msg) => handleHelp(bot, msg));
@@ -24,12 +25,14 @@ function initBot() {
     bot.onText(/\/subscription/, (msg) => handleSubscription(bot, msg));
     bot.onText(/\/refer/, (msg) => handleRefer(bot, msg));
 
-    // Catch-all for text messages to handle onboarding flow
-    bot.on('message', (msg) => {
+    // Catch-all for text messages to handle conversational flows
+    bot.on('message', async (msg) => {
         const chatId = msg.chat.id.toString();
         if (msg.text && !msg.text.startsWith('/')) {
             if (onboardingState.has(chatId)) {
                 handleOnboarding(bot, msg);
+            } else {
+                await handleCycleLengthMessage(bot, msg);
             }
         }
     });

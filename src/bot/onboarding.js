@@ -12,8 +12,35 @@ const STEPS = {
     DATE: 'date',
     TIME: 'time',
     TIMEZONE: 'timezone',
+    CYCLE_LENGTH: 'cycle_length',
     COMPLETED: 'completed'
 };
+
+function parseCycleRange(text) {
+    const trimmed = text.trim();
+    if (trimmed.toLowerCase() === 'skip') return { min: 28, max: 28, avg: 28 };
+
+    // "28-34" or "28–34"
+    const rangeMatch = trimmed.match(/^(\d+)\s*[-–]\s*(\d+)$/);
+    if (rangeMatch) {
+        const min = parseInt(rangeMatch[1]);
+        const max = parseInt(rangeMatch[2]);
+        if (min >= 14 && max >= min && max <= 60) {
+            return { min, max, avg: Math.round((min + max) / 2) };
+        }
+    }
+
+    // single number
+    const singleMatch = trimmed.match(/^(\d+)$/);
+    if (singleMatch) {
+        const val = parseInt(singleMatch[1]);
+        if (val >= 14 && val <= 60) {
+            return { min: val, max: val, avg: val };
+        }
+    }
+
+    return null;
+}
 
 async function handleOnboarding(bot, msg) {
     const chatId = msg.chat.id.toString();
@@ -97,6 +124,20 @@ async function handleOnboarding(bot, msg) {
             }
 
             state.data.timezone = tzToSave;
+            state.step = STEPS.CYCLE_LENGTH;
+            onboardingState.set(chatId, state);
+            await bot.sendMessage(chatId, `Got it — I've saved your timezone as ${tzToSave}.\n\nOne last thing: what's your partner's typical cycle length? You can give a single number or a range (e.g. '28' or '28-34'). Type 'skip' to use the default of 28 days.`);
+            break;
+
+        case STEPS.CYCLE_LENGTH:
+            const cycleRange = parseCycleRange(text);
+            if (!cycleRange) {
+                await bot.sendMessage(chatId, "I couldn't understand that. Please enter a number or range like '28' or '28-34' (between 14 and 60 days), or type 'skip'.");
+                return;
+            }
+            state.data.cycleLengthMin = cycleRange.min;
+            state.data.cycleLengthMax = cycleRange.max;
+            state.data.cycleLength = cycleRange.avg;
 
             // Save to DB
             try {
@@ -107,6 +148,9 @@ async function handleOnboarding(bot, msg) {
                         cycle_start_date: state.data.cycleStartDate,
                         notification_time: state.data.notificationTime,
                         timezone: state.data.timezone,
+                        cycle_length: state.data.cycleLength,
+                        cycle_length_min: state.data.cycleLengthMin,
+                        cycle_length_max: state.data.cycleLengthMax,
                         subscription_status: 'active'
                     },
                     create: {
@@ -115,12 +159,18 @@ async function handleOnboarding(bot, msg) {
                         cycle_start_date: state.data.cycleStartDate,
                         notification_time: state.data.notificationTime,
                         timezone: state.data.timezone,
+                        cycle_length: state.data.cycleLength,
+                        cycle_length_min: state.data.cycleLengthMin,
+                        cycle_length_max: state.data.cycleLengthMax,
                         subscription_status: 'active'
                     }
                 });
 
-                await bot.sendMessage(chatId, `Great! You're all set up.\nI've saved your timezone as ${tzToSave}.`);
-                await bot.sendMessage(chatId, `Starting tomorrow morning, I'll send you a brief message.`);
+                const rangeDisplay = state.data.cycleLengthMin === state.data.cycleLengthMax
+                    ? `${state.data.cycleLengthMin} days`
+                    : `${state.data.cycleLengthMin}–${state.data.cycleLengthMax} days (using ${state.data.cycleLength} as average)`;
+                await bot.sendMessage(chatId, `You're all set up.\nCycle length: ${rangeDisplay}`);
+                await bot.sendMessage(chatId, `Starting tomorrow morning, I'll send you a brief daily message.`);
 
                 onboardingState.delete(chatId);
             } catch (e) {
@@ -132,4 +182,4 @@ async function handleOnboarding(bot, msg) {
     }
 }
 
-module.exports = { handleOnboarding, onboardingState };
+module.exports = { handleOnboarding, onboardingState, parseCycleRange };
