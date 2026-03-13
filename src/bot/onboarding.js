@@ -47,7 +47,7 @@ function parseCycleRange(text) {
     return null;
 }
 
-async function handleOnboarding(bot, msg) {
+async function handleOnboarding(bot, msg, prefilledEmail = null) {
     const chatId = msg.chat.id.toString();
     const text = msg.text;
 
@@ -62,9 +62,13 @@ async function handleOnboarding(bot, msg) {
     let state = onboardingState.get(chatId);
 
     if (!state) {
-        // Initial start
-        onboardingState.set(chatId, { step: STEPS.EMAIL, data: {} });
-        await bot.sendMessage(chatId, "Welcome to CycleCare 💜 I'll send you a daily message to help you support your partner.\n\nWhat's your email? I'll use it to send you updates about new features. (type 'skip' to continue without)");
+        if (prefilledEmail) {
+            onboardingState.set(chatId, { step: STEPS.NAME, data: { email: prefilledEmail } });
+            await bot.sendMessage(chatId, "Welcome to CycleCare 💜 I'll send you a daily message to help you support your partner.\n\nWhat's your partner's name? (or type 'skip' to keep messages generic)");
+        } else {
+            onboardingState.set(chatId, { step: STEPS.EMAIL, data: {} });
+            await bot.sendMessage(chatId, "Welcome to CycleCare 💜 I'll send you a daily message to help you support your partner.\n\nWhat's your email? I'll use it to send you updates about new features. (type 'skip' to continue without)");
+        }
         return;
     }
 

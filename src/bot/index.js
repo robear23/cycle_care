@@ -10,11 +10,20 @@ const bot = new TelegramBot(token, { polling: true });
 function initBot() {
     console.log('Bot is running...');
 
-    bot.onText(/\/start/, (msg) => {
-        // trigger onboarding
-        // reset state if needed
-        onboardingState.set(msg.chat.id.toString(), { step: 'name', data: {} });
-        handleOnboarding(bot, msg);
+    bot.onText(/\/start(?:\s+(.+))?/, (msg, match) => {
+        const chatId = msg.chat.id.toString();
+        const payload = match[1]?.trim();
+        let prefilledEmail = null;
+        if (payload) {
+            try {
+                const decoded = Buffer.from(payload, 'base64url').toString('utf8');
+                if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(decoded)) {
+                    prefilledEmail = decoded;
+                }
+            } catch (e) {}
+        }
+        onboardingState.delete(chatId); // reset so handleOnboarding runs the init block
+        handleOnboarding(bot, msg, prefilledEmail);
     });
 
     bot.onText(/\/cyclelength/, (msg) => handleCycleLength(bot, msg));

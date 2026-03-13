@@ -78,8 +78,9 @@ app.post('/api/waitlist', async (req, res) => {
         console.error(`Error saving lead or sending email to ${email}:`, error);
     }
 
-    // Automatically redirect the user to the Telegram Bot
-    res.redirect('https://t.me/cycle_care_bot');
+    // Automatically redirect the user to the Telegram Bot with email pre-filled
+    const encodedEmail = Buffer.from(email).toString('base64url');
+    res.redirect(`https://t.me/cycle_care_bot?start=${encodedEmail}`);
 });
 const { handleReminderCallbacks } = require('./scheduler/reminders');
 
