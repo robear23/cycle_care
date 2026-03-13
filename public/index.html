@@ -4,37 +4,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CycleCare | Never guess your partner's cycle again</title>
+    <title>CycleCare | A quiet heads-up for her biggest days</title>
     <meta name="description"
         content="A quiet, automated Telegram assistant that gives you the heads-up exactly when you need it.">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' fill='%238B5CF6'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 
 <body>
     <div class="background-container">
+        <div class="noise-overlay"></div>
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
         <div class="blur-overlay"></div>
     </div>
 
     <nav>
         <div class="logo">
-            <span class="icon">💜</span> CycleCare
+            <svg class="nav-logo-svg" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="url(#logoGradient)"/>
+                <defs>
+                    <linearGradient id="logoGradient" x1="2" y1="3" x2="22" y2="21.35" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#8B5CF6"/>
+                        <stop offset="1" stop-color="#EC4899"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            CycleCare
         </div>
     </nav>
 
     <main>
         <div class="hero">
-            <div class="badge">Free Forever</div>
-            <h1>Never guess your partner's cycle again.</h1>
+            <div class="badge">
+                <span class="badge-dot"></span> Free Forever
+            </div>
+            <h1>A quiet heads-up for<br>her biggest days</h1>
             <p>A quiet, automated Telegram assistant that gives you the heads-up exactly when you need it. Support them
                 better without the guesswork.</p>
             <div class="hero-cta-container">
                 <form action="/api/waitlist" method="POST" class="hero-email-form">
-                    <input type="email" name="email" placeholder="Enter your email address to begin" required>
+                    <input type="email" name="email" placeholder="Enter your email to begin" required>
                     <button type="submit">
                         Open in Telegram
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -43,36 +57,40 @@
                         </svg>
                     </button>
                 </form>
-                <p class="hero-note">No spam. We'll instantly redirect you to CycleCare.</p>
+                <p class="hero-note">No spam. We'll instantly redirect you to CycleCare on Telegram.</p>
             </div>
         </div>
 
         <div class="features">
             <div class="feature-card glass">
-                <div class="feature-icon">🗓️</div>
+                <div class="feature-icon-wrapper">
+                    <div class="feature-icon">🗓️</div>
+                </div>
                 <h3>Daily Briefing</h3>
                 <p>Receive a single, concise message each morning summarizing their current cycle phase.</p>
             </div>
             <div class="feature-card glass">
-                <div class="feature-icon">⚡</div>
+                <div class="feature-icon-wrapper">
+                    <div class="feature-icon">⚡</div>
+                </div>
                 <h3>Zero Friction</h3>
                 <p>No apps to download. Everything runs seamlessly inside Telegram where you already text.</p>
             </div>
             <div class="feature-card glass">
-                <div class="feature-icon">🔒</div>
+                <div class="feature-icon-wrapper">
+                    <div class="feature-icon">🔒</div>
+                </div>
                 <h3>100% Private</h3>
                 <p>We don't sell data or run ads. Your tracking is secure, private, and yours alone.</p>
             </div>
         </div>
-
-
     </main>
 
     <footer>
         <p>&copy; 2026 CycleCare. Built with 💜.</p>
         <a href="https://foresttechsolutions.net/" target="_blank" rel="noopener noreferrer" class="footer-logo">
             <span>An app developed by</span>
-            <img src="/foresttech_logo.png" alt="ForestTech Solutions Logo" class="footer-img">
+            <img src="/foresttech_logo.png" alt="ForestTech Solutions" class="footer-img">
         </a>
     </footer>
 </body>

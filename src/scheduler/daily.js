@@ -4,6 +4,7 @@ const { calculatePhase } = require('../lib/cycle');
 const { getDailyMessage } = require('../lib/messages');
 const { bot } = require('../bot/index');
 const { checkUserCycleReminder } = require('./reminders');
+const { checkAndNurtureLeads } = require('./nurture');
 
 const prisma = new PrismaClient();
 
@@ -11,6 +12,15 @@ const { DateTime } = require('luxon');
 
 function startScheduler() {
     console.log('Scheduler started...');
+
+    // Daily lead nurturing at 10 AM UTC
+    cron.schedule('0 10 * * *', async () => {
+        try {
+            await checkAndNurtureLeads();
+        } catch (err) {
+            console.error('Error running lead nurturing:', err);
+        }
+    });
 
     // Run every minute
     cron.schedule('* * * * *', async () => {

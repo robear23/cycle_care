@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { bot } = require('../bot/index');
+const { getDailyTip } = require('./social');
 
 // Telegram Webhook (if used)
 router.post('/webhook/telegram', (req, res) => {
@@ -12,5 +12,8 @@ router.post('/webhook/telegram', (req, res) => {
 router.get('/health', (req, res) => {
     res.send('OK');
 });
+
+// Social Marketing
+router.get('/social/daily-tip', getDailyTip);
 
 module.exports = router;

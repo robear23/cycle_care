@@ -10,20 +10,33 @@ const bot = new TelegramBot(token, { polling: true });
 function initBot() {
     console.log('Bot is running...');
 
-    bot.onText(/\/start(?:\s+(.+))?/, (msg, match) => {
+    bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
         const chatId = msg.chat.id.toString();
         const payload = match[1]?.trim();
         let prefilledEmail = null;
+        let referredBy = null;
+
         if (payload) {
+            // Attempt to decode as email
             try {
                 const decoded = Buffer.from(payload, 'base64url').toString('utf8');
                 if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(decoded)) {
                     prefilledEmail = decoded;
                 }
             } catch (e) {}
+
+            // If not email, check if it's a referral code
+            if (!prefilledEmail && payload.length === 6) {
+                const referrer = await prisma.user.findUnique({
+                    where: { referral_code: payload.toUpperCase() }
+                });
+                if (referrer) {
+                    referredBy = referrer.referral_code;
+                }
+            }
         }
         onboardingState.delete(chatId); // reset so handleOnboarding runs the init block
-        handleOnboarding(bot, msg, prefilledEmail);
+        handleOnboarding(bot, msg, prefilledEmail, referredBy);
     });
 
     bot.onText(/\/cyclelength/, (msg) => handleCycleLength(bot, msg));

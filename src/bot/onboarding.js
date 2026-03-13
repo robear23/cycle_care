@@ -47,26 +47,22 @@ function parseCycleRange(text) {
     return null;
 }
 
-async function handleOnboarding(bot, msg, prefilledEmail = null) {
+async function handleOnboarding(bot, msg, prefilledEmail = null, referredBy = null) {
     const chatId = msg.chat.id.toString();
     const text = msg.text;
 
     // Check if user is already in DB
     const existingUser = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
-    if (existingUser && !onboardingState.has(chatId)) {
-        // If user exists and not currently onboarding, maybe ignore or redirect?
-        // If they sent /start again, maybe re-onboard or show menu?
-        // For now, let's assume /start triggers this.
-    }
-
+    
     let state = onboardingState.get(chatId);
 
     if (!state) {
+        const data = { referredBy };
         if (prefilledEmail) {
-            onboardingState.set(chatId, { step: STEPS.NAME, data: { email: prefilledEmail } });
+            onboardingState.set(chatId, { step: STEPS.NAME, data: { ...data, email: prefilledEmail } });
             await bot.sendMessage(chatId, "Welcome to CycleCare 💜 I'll send you a daily message to help you support your partner.\n\nWhat's your partner's name? (or type 'skip' to keep messages generic)");
         } else {
-            onboardingState.set(chatId, { step: STEPS.EMAIL, data: {} });
+            onboardingState.set(chatId, { step: STEPS.EMAIL, data });
             await bot.sendMessage(chatId, "Welcome to CycleCare 💜 I'll send you a daily message to help you support your partner.\n\nWhat's your email? I'll use it to send you updates about new features. (type 'skip' to continue without)");
         }
         return;
@@ -175,6 +171,7 @@ async function handleOnboarding(bot, msg, prefilledEmail = null) {
                         cycle_length: state.data.cycleLength,
                         cycle_length_min: state.data.cycleLengthMin,
                         cycle_length_max: state.data.cycleLengthMax,
+                        referred_by: state.data.referredBy,
                         subscription_status: 'active'
                     },
                     create: {
@@ -187,6 +184,7 @@ async function handleOnboarding(bot, msg, prefilledEmail = null) {
                         cycle_length: state.data.cycleLength,
                         cycle_length_min: state.data.cycleLengthMin,
                         cycle_length_max: state.data.cycleLengthMax,
+                        referred_by: state.data.referredBy,
                         subscription_status: 'active'
                     }
                 });
