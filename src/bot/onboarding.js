@@ -4,10 +4,11 @@ const chrono = require('chrono-node');
 const { DateTime } = require('luxon');
 const cityTimezones = require('city-timezones');
 
-// In-memory state for onboarding: { [chatId]: { step: 'name' | 'date' | 'time' | 'timezone', data: {} } }
+// In-memory state for onboarding: { [chatId]: { step: 'email' | 'name' | 'date' | 'time' | 'timezone' | 'cycle_length', data: {} } }
 const onboardingState = new Map();
 
 const STEPS = {
+    EMAIL: 'email',
     NAME: 'name',
     DATE: 'date',
     TIME: 'time',
@@ -15,6 +16,10 @@ const STEPS = {
     CYCLE_LENGTH: 'cycle_length',
     COMPLETED: 'completed'
 };
+
+function isValidEmail(text) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text.trim());
+}
 
 function parseCycleRange(text) {
     const trimmed = text.trim();
@@ -58,12 +63,26 @@ async function handleOnboarding(bot, msg) {
 
     if (!state) {
         // Initial start
-        onboardingState.set(chatId, { step: STEPS.NAME, data: {} });
-        await bot.sendMessage(chatId, "Welcome to CycleCare 💜 I'll send you a daily message to help you support your partner.\n\nFirst — what's their name? (or type 'skip' to keep messages generic)");
+        onboardingState.set(chatId, { step: STEPS.EMAIL, data: {} });
+        await bot.sendMessage(chatId, "Welcome to CycleCare 💜 I'll send you a daily message to help you support your partner.\n\nWhat's your email? I'll use it to send you updates about new features. (type 'skip' to continue without)");
         return;
     }
 
     switch (state.step) {
+        case STEPS.EMAIL:
+            if (text.toLowerCase() === 'skip') {
+                state.data.email = null;
+            } else if (isValidEmail(text)) {
+                state.data.email = text.trim().toLowerCase();
+            } else {
+                await bot.sendMessage(chatId, "That doesn't look like a valid email. Please try again, or type 'skip' to continue without.");
+                return;
+            }
+            state.step = STEPS.NAME;
+            onboardingState.set(chatId, state);
+            await bot.sendMessage(chatId, "What's your partner's name? (or type 'skip' to keep messages generic)");
+            break;
+
         case STEPS.NAME:
             state.data.partnerName = text.toLowerCase() === 'skip' ? null : text;
             state.step = STEPS.DATE;
@@ -144,6 +163,7 @@ async function handleOnboarding(bot, msg) {
                 await prisma.user.upsert({
                     where: { telegram_chat_id: chatId },
                     update: {
+                        email: state.data.email,
                         partner_name: state.data.partnerName,
                         cycle_start_date: state.data.cycleStartDate,
                         notification_time: state.data.notificationTime,
@@ -155,6 +175,7 @@ async function handleOnboarding(bot, msg) {
                     },
                     create: {
                         telegram_chat_id: chatId,
+                        email: state.data.email,
                         partner_name: state.data.partnerName,
                         cycle_start_date: state.data.cycleStartDate,
                         notification_time: state.data.notificationTime,
