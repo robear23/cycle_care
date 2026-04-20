@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { calculatePhase } = require('../lib/cycle');
+const { calculatePhase, getUpcomingPhasesRanges } = require('../lib/cycle');
 const { parseCycleRange } = require('./onboarding');
 
 // In-memory state for /cyclelength command: { [chatId]: true }
@@ -190,6 +190,62 @@ async function handleCycleLengthMessage(bot, msg) {
     return true;
 }
 
+async function handleWeekends(bot, msg) {
+    const chatId = msg.chat.id.toString();
+    const user = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
+
+    if (!user) {
+        await bot.sendMessage(chatId, "You need to sign up first! Send /start.");
+        return;
+    }
+
+    const { luteal, menstrual } = getUpcomingPhasesRanges(user.cycle_start_date, user.cycle_length);
+
+    const getWeekendsInRange = (start, end) => {
+        const weekends = [];
+        const current = new Date(start);
+        while (current <= end) {
+            const day = current.getDay();
+            if (day === 0 || day === 6) { // Sunday = 0, Saturday = 6
+                weekends.push(new Date(current));
+            }
+            current.setDate(current.getDate() + 1);
+        }
+        return weekends;
+    };
+
+    const lutealWeekends = getWeekendsInRange(luteal.start, luteal.end);
+    const menstrualWeekends = getWeekendsInRange(menstrual.start, menstrual.end);
+
+    const formatDate = (date) => {
+        return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    };
+
+    let text = "🗓 **Upcoming Phase Weekends**\n\n";
+
+    if (lutealWeekends.length > 0) {
+        text += "🍂 **Luteal Phase:**\n";
+        lutealWeekends.forEach(d => {
+            text += `• ${formatDate(d)}\n`;
+        });
+    } else {
+        text += "🍂 **Luteal Phase:** No weekends in this phase.\n";
+    }
+
+    text += "\n";
+
+    if (menstrualWeekends.length > 0) {
+        text += "🩸 **Next Menstrual Phase:**\n";
+        menstrualWeekends.forEach(d => {
+            text += `• ${formatDate(d)}\n`;
+        });
+    } else {
+        text += "🩸 **Next Menstrual Phase:** No weekends in this phase.\n";
+    }
+
+    await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+}
+
 async function handleHelp(bot, msg) {
     const helpText = `
 /start - Start onboarding
@@ -197,6 +253,7 @@ async function handleHelp(bot, msg) {
 /cyclelength - View or update cycle length range
 /today - Get today's message
 /phase - Get current phase info
+/weekends - Get upcoming luteal/menstrual weekends
 /learn - Learn about cycle phases
 /subscription - Manage subscription
 /refer - Share CycleCare
@@ -214,5 +271,6 @@ module.exports = {
     handleSubscription,
     handleRefer,
     handleCycleLength,
+    handleWeekends,
     handleCycleLengthMessage
 };

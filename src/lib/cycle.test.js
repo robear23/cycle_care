@@ -1,6 +1,6 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { calculatePhase } = require('./cycle');
+const { calculatePhase, getUpcomingPhasesRanges } = require('./cycle');
 
 describe('Cycle Phase Calculation', () => {
 
@@ -68,12 +68,12 @@ describe('Cycle Phase Calculation', () => {
         assert.strictEqual(result.phase, 'luteal');
     });
 
-    test('Cycle Rollover - Day 29 is Day 1 of next cycle', () => {
+    test('Cycle Rollover - Day 29 is shown as Day 29, not Day 1 (as per logic change)', () => {
         const cycleStart = new Date('2023-10-01');
         const targetDate = new Date('2023-10-29');
         const result = calculatePhase(cycleStart, 28, targetDate);
-        assert.strictEqual(result.day, 1);
-        assert.strictEqual(result.phase, 'menstrual');
+        assert.strictEqual(result.day, 29);
+        assert.strictEqual(result.phase, 'luteal');
     });
 
     test('Long Cycle (35 days) - Ovulation is Day 21 (Length - 14)', () => {
@@ -110,5 +110,33 @@ describe('Cycle Phase Calculation', () => {
         const result = calculatePhase(cycleStart, 28, targetDate);
         // Implementation returns days < 0 as unknown/0
         assert.strictEqual(result.phase, 'unknown');
+    });
+});
+
+function formatLocalDate(date) {
+    const d = new Date(date);
+    const month = '' + (d.getMonth() + 1);
+    const day = '' + d.getDate();
+    const year = d.getFullYear();
+    return [year, month.padStart(2, '0'), day.padStart(2, '0')].join('-');
+}
+
+describe('getUpcomingPhasesRanges', () => {
+    test('Standard 28-day cycle projection', () => {
+        const cycleStart = new Date('2023-10-01');
+        const refDate = new Date('2023-10-05');
+        const ranges = getUpcomingPhasesRanges(cycleStart, 28, refDate);
+        
+        // Luteal range for 28-day: Days 17-28
+        // Start: Oct 1 + 16 days = Oct 17
+        // End: Oct 1 + 27 days = Oct 28
+        assert.strictEqual(formatLocalDate(ranges.luteal.start), '2023-10-17');
+        assert.strictEqual(formatLocalDate(ranges.luteal.end), '2023-10-28');
+
+        // Subsequent Menstrual: Days 29-33 (CycleLength + 1 to 5)
+        // Start: Oct 1 + 28 days = Oct 29
+        // End: Oct 1 + 32 days = Nov 02
+        assert.strictEqual(formatLocalDate(ranges.menstrual.start), '2023-10-29');
+        assert.strictEqual(formatLocalDate(ranges.menstrual.end), '2023-11-02');
     });
 });
