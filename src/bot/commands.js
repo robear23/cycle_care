@@ -2,6 +2,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { calculatePhase, getUpcomingPhasesRanges } = require('../lib/cycle');
 const { parseCycleRange } = require('./onboarding');
+const { PREGNANCY_PAUSED_TEXT } = require('./pregnancy');
+const { TODAY_YESTERDAY_ROW, OTHER_DATE_BUTTON } = require('./periodStart');
 
 // In-memory state for /cyclelength command: { [chatId]: true }
 const cycleLengthState = new Map();
@@ -20,13 +22,8 @@ async function handleUpdate(bot, msg) {
     const opts = {
         reply_markup: {
             inline_keyboard: [
-                [
-                    { text: 'Yes, started today', callback_data: `period_start_today` },
-                    { text: 'Yes, yesterday', callback_data: `period_start_yesterday` }
-                ],
-                [
-                    { text: 'Cancel', callback_data: `period_not_yet` }
-                ]
+                TODAY_YESTERDAY_ROW,
+                [OTHER_DATE_BUTTON, { text: 'Cancel', callback_data: 'period_update_cancel' }]
             ]
         }
     };
@@ -40,6 +37,11 @@ async function handleToday(bot, msg) {
 
     if (!user) {
         await bot.sendMessage(chatId, "You need to sign up first! Send /start.");
+        return;
+    }
+
+    if (user.pregnancy_mode) {
+        await bot.sendMessage(chatId, PREGNANCY_PAUSED_TEXT);
         return;
     }
 
@@ -71,6 +73,11 @@ async function handlePhase(bot, msg) {
 
     if (!user) {
         await bot.sendMessage(chatId, "You need to sign up first! Send /start.");
+        return;
+    }
+
+    if (user.pregnancy_mode) {
+        await bot.sendMessage(chatId, PREGNANCY_PAUSED_TEXT);
         return;
     }
 
@@ -199,6 +206,11 @@ async function handleWeekends(bot, msg) {
         return;
     }
 
+    if (user.pregnancy_mode) {
+        await bot.sendMessage(chatId, PREGNANCY_PAUSED_TEXT);
+        return;
+    }
+
     const { luteal, menstrual } = getUpcomingPhasesRanges(user.cycle_start_date, user.cycle_length);
 
     const getWeekendsInRange = (start, end) => {
@@ -254,6 +266,7 @@ async function handleHelp(bot, msg) {
 /today - Get today's message
 /phase - Get current phase info
 /weekends - Get upcoming luteal/menstrual weekends
+/resume - Resume tracking after pregnancy
 /learn - Learn about cycle phases
 /subscription - Manage subscription
 /refer - Share CycleCare

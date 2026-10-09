@@ -20,6 +20,7 @@ model User {
   notification_time String   @default("08:00")
   timezone          String   @default("UTC")
   subscription_status String @default("active") // active, paused, cancelled
+  pregnancy_mode    Boolean  @default(false)
   referral_code     String?  @unique
   referred_by       String?
   created_at        DateTime @default(now())

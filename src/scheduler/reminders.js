@@ -1,6 +1,8 @@
 const { DateTime } = require('luxon');
 const { PrismaClient } = require('@prisma/client');
 const { bot } = require('../bot/index');
+const { handlePregnancyCallback } = require('../bot/pregnancy');
+const { TODAY_YESTERDAY_ROW, OTHER_DATE_BUTTON, handlePeriodStartCallback } = require('../bot/periodStart');
 const prisma = new PrismaClient();
 
 async function checkUserCycleReminder(user) {
@@ -23,12 +25,13 @@ async function checkUserCycleReminder(user) {
         const opts = {
             reply_markup: {
                 inline_keyboard: [
+                    TODAY_YESTERDAY_ROW,
                     [
-                        { text: 'Yes, started today', callback_data: `period_start_today` },
-                        { text: 'Yes, yesterday', callback_data: `period_start_yesterday` }
+                        { text: 'Not yet', callback_data: `period_not_yet` },
+                        OTHER_DATE_BUTTON
                     ],
                     [
-                        { text: 'Not yet', callback_data: `period_not_yet` }
+                        { text: "🤰 She's pregnant", callback_data: `pregnancy_ask` }
                     ]
                 ]
             }
@@ -53,29 +56,18 @@ function handleReminderCallbacks(bot) {
         const user = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
         if (!user) return;
 
-        let newDate;
-        let responseText;
-
-        if (action === 'period_start_today') {
-            newDate = new Date();
-            responseText = "Got it. Cycle updated to start today.";
-        } else if (action === 'period_start_yesterday') {
-            newDate = new Date();
-            newDate.setDate(newDate.getDate() - 1);
-            responseText = "Got it. Cycle updated to start yesterday.";
-        } else if (action === 'period_not_yet') {
-            await bot.answerCallbackQuery(callbackQuery.id, { text: "Okay, I'll check in again later." });
-            await bot.sendMessage(chatId, "No problem. I'll keep the current cycle going until you update me.");
+        try {
+            if (await handlePeriodStartCallback(bot, callbackQuery)) return;
+            if (await handlePregnancyCallback(bot, callbackQuery)) return;
+        } catch (e) {
+            console.error(`Failed to handle callback for user ${user.id}`, e);
+            await bot.sendMessage(chatId, "Something went wrong. Please try again.");
             return;
         }
 
-        if (newDate) {
-            await prisma.user.update({
-                where: { telegram_chat_id: chatId },
-                data: { cycle_start_date: newDate }
-            });
-            await bot.answerCallbackQuery(callbackQuery.id, { text: "Updated!" });
-            await bot.sendMessage(chatId, responseText);
+        if (action === 'period_not_yet') {
+            await bot.answerCallbackQuery(callbackQuery.id, { text: "Okay, I'll check in again later." });
+            await bot.sendMessage(chatId, "No problem. I'll keep the current cycle going until you update me.");
         }
     });
 }

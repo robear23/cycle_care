@@ -29,7 +29,7 @@ function startScheduler() {
 
         // We want to find users where their LOCAL time matches their notification_time.
         const users = await prisma.user.findMany({
-            where: { subscription_status: { in: ['trial', 'active'] } }
+            where: { subscription_status: { in: ['trial', 'active'] }, pregnancy_mode: false }
         });
 
         users.forEach(async (user) => {

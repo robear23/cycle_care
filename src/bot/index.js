@@ -1,6 +1,8 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { handleOnboarding, onboardingState } = require('./onboarding');
-const { handleToday, handlePhase, handleHelp, handleLearn, handleSubscription, handleRefer, handleCycleLength, handleWeekends, handleCycleLengthMessage } = require('./commands');
+const { handleResume } = require('./pregnancy');
+const { handlePeriodDateMessage } = require('./periodStart');
+const { handleUpdate, handleToday, handlePhase, handleHelp, handleLearn, handleSubscription, handleRefer, handleCycleLength, handleWeekends, handleCycleLengthMessage } = require('./commands');
 
 // Initialize bot
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -47,6 +49,8 @@ function initBot() {
     bot.onText(/\/subscription/, (msg) => handleSubscription(bot, msg));
     bot.onText(/\/refer/, (msg) => handleRefer(bot, msg));
     bot.onText(/\/weekends/, (msg) => handleWeekends(bot, msg));
+    bot.onText(/\/update/, (msg) => handleUpdate(bot, msg));
+    bot.onText(/\/resume/, (msg) => handleResume(bot, msg));
 
     // Catch-all for text messages to handle conversational flows
     bot.on('message', async (msg) => {
@@ -54,7 +58,7 @@ function initBot() {
         if (msg.text && !msg.text.startsWith('/')) {
             if (onboardingState.has(chatId)) {
                 handleOnboarding(bot, msg);
-            } else {
+            } else if (!(await handlePeriodDateMessage(bot, msg))) {
                 await handleCycleLengthMessage(bot, msg);
             }
         }
