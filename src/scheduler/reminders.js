@@ -1,47 +1,44 @@
-const { DateTime } = require('luxon');
 const { prisma } = require('../lib/prisma');
+const { partnerName, expectedCycleEnd, cycleStatus } = require('../lib/briefing');
 const { bot } = require('../bot/index');
 const { handlePregnancyCallback } = require('../bot/pregnancy');
+const { handleAccountCallback } = require('../bot/account');
+const { handleOnboardingCallback } = require('../bot/onboarding');
 const { TODAY_YESTERDAY_ROW, OTHER_DATE_BUTTON, handlePeriodStartCallback } = require('../bot/periodStart');
 
-async function checkUserCycleReminder(user) {
-    // We expect this to run once a day per user, right around their notification time.
-    const cycleStart = new Date(user.cycle_start_date);
-    const now = new Date();
-
-    // specific logic: diff in days
-    const diffTime = now.getTime() - cycleStart.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    // For better accuracy, we can also use calculatePhase logic, but diffDays is fine here.
-    // Fire reminder window: from cycle_length_min through cycle_length_max (or cycle_length if no range)
+// Runs right after the daily briefing. From the start of the expected window
+// it asks every day until the user logs the new period (or pregnancy).
+async function checkUserCycleReminder(user, now = new Date()) {
+    const { day } = cycleStatus(user, now);
     const windowStart = user.cycle_length_min || user.cycle_length;
-    const windowEnd = user.cycle_length_max || user.cycle_length;
-    if (diffDays >= windowStart && diffDays <= windowEnd) {
-        const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
+    if (day < windowStart) return;
 
-        // Send interactive message
-        const opts = {
-            reply_markup: {
-                inline_keyboard: [
-                    TODAY_YESTERDAY_ROW,
-                    [
-                        { text: 'Not yet', callback_data: `period_not_yet` },
-                        OTHER_DATE_BUTTON
-                    ],
-                    [
-                        { text: "🤰 She's pregnant", callback_data: `pregnancy_ask` }
-                    ]
+    const name = partnerName(user) || 'Your partner';
+    const daysLate = day - expectedCycleEnd(user);
+    const question = daysLate > 0
+        ? `${name}'s period is ${daysLate} day${daysLate === 1 ? '' : 's'} later than expected. Has it started?`
+        : `Hey! According to your settings, ${name}'s period might be due around now. Has it started?`;
+
+    const opts = {
+        reply_markup: {
+            inline_keyboard: [
+                TODAY_YESTERDAY_ROW,
+                [
+                    { text: 'Not yet', callback_data: 'period_not_yet' },
+                    OTHER_DATE_BUTTON
+                ],
+                [
+                    { text: "🤰 She's pregnant", callback_data: 'pregnancy_ask' }
                 ]
-            }
-        };
-
-        try {
-            await bot.sendMessage(user.telegram_chat_id, `Hey! According to your settings, ${partnerName}'s period might be due around now. Has it started?`, opts);
-            console.log(`Sent cycle end reminder to user ${user.id}`);
-        } catch (e) {
-            console.error(`Failed to send cycle reminder to user ${user.id}`, e);
+            ]
         }
+    };
+
+    try {
+        await bot.sendMessage(user.telegram_chat_id, question, opts);
+        console.log(`Sent cycle end reminder to user ${user.id}`);
+    } catch (e) {
+        console.error(`Failed to send cycle reminder to user ${user.id}`, e);
     }
 }
 
@@ -63,12 +60,14 @@ function handleReminderCallbacks(bot) {
                 return;
             }
 
-            if (await handlePeriodStartCallback(bot, callbackQuery)) return;
+            if (await handlePeriodStartCallback(bot, callbackQuery, user)) return;
             if (await handlePregnancyCallback(bot, callbackQuery)) return;
+            if (await handleAccountCallback(bot, callbackQuery)) return;
+            if (await handleOnboardingCallback(bot, callbackQuery)) return;
 
             if (action === 'period_not_yet') {
-                await bot.answerCallbackQuery(callbackQuery.id, { text: "Okay, I'll check in again later." });
-                await bot.sendMessage(chatId, "No problem. I'll keep the current cycle going until you update me.");
+                await bot.answerCallbackQuery(callbackQuery.id, { text: "Okay, I'll check in again tomorrow." });
+                await bot.sendMessage(chatId, "No problem. I'll check in again tomorrow.");
             }
         } catch (e) {
             console.error(`Failed to handle callback ${action} for chat ${chatId}`, e);

@@ -1,14 +1,12 @@
 const { prisma } = require('../lib/prisma');
 const { botLink } = require('../lib/botLink');
-const { Resend } = require('resend');
+const { isEmailConfigured, sendEmail } = require('../lib/email');
 const { DateTime } = require('luxon');
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 async function checkAndNurtureLeads() {
     console.log('[Nurture] Checking for leads to nurture...');
 
-    if (!resend) {
+    if (!isEmailConfigured()) {
         console.warn('[Nurture] RESEND_API_KEY not found. Skipping nurturing.');
         return;
     }
@@ -25,25 +23,22 @@ async function checkAndNurtureLeads() {
 
     for (const lead of leads) {
         try {
-            // Check if they signed up already
-            const user = await prisma.user.findUnique({
+            // Claim the lead first so another instance can't send the same follow-up.
+            const claimed = await prisma.waitlistLead.updateMany({
+                where: { id: lead.id, nurtured: false },
+                data: { nurtured: true }
+            });
+            if (claimed.count === 0) continue;
+
+            // Already signed up, so no reminder needed
+            const user = await prisma.user.findFirst({
                 where: { email: lead.email }
             });
-
-            if (user) {
-                // Already signed up, mark as nurtured so we don't check again
-                await prisma.waitlistLead.update({
-                    where: { id: lead.id },
-                    data: { nurtured: true }
-                });
-                continue;
-            }
+            if (user) continue;
 
             // Send reminder email
-            console.log(`[Nurture] Sending follow-up to ${lead.email}`);
-            await resend.emails.send({
-                from: 'CycleCare <contact@foresttechsolutions.net>',
-                replyTo: 'contact@foresttechsolutions.net',
+            console.log(`[Nurture] Sending follow-up to lead ${lead.id}`);
+            await sendEmail({
                 to: lead.email,
                 subject: 'Ready to start CycleCare? 💜',
                 html: `
@@ -64,15 +59,8 @@ async function checkAndNurtureLeads() {
                     </div>
                 `
             });
-
-            // Mark as nurtured
-            await prisma.waitlistLead.update({
-                where: { id: lead.id },
-                data: { nurtured: true }
-            });
-
         } catch (error) {
-            console.error(`[Nurture] Error processing lead ${lead.email}:`, error);
+            console.error(`[Nurture] Error processing lead ${lead.id}:`, error);
         }
     }
 }

@@ -9,7 +9,7 @@ async function askForResumeDate(bot, chatId) {
     });
 }
 
-// /resume command
+// /resume — un-pauses daily messages after /stop, and ends pregnancy mode
 async function handleResume(bot, msg) {
     const chatId = msg.chat.id.toString();
     const user = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
@@ -19,8 +19,18 @@ async function handleResume(bot, msg) {
         return;
     }
 
+    const wasPaused = ['paused', 'cancelled'].includes(user.subscription_status);
+    if (wasPaused) {
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { subscription_status: 'active', next_send_at: null }
+        });
+    }
+
     if (!user.pregnancy_mode) {
-        await bot.sendMessage(chatId, "Tracking is already active. If a new period has started, send /update.");
+        await bot.sendMessage(chatId, wasPaused
+            ? `Welcome back 💜 Daily messages are on again — the next one arrives at ${user.notification_time}.`
+            : "Tracking is already active. If a new period has started, send /update.");
         return;
     }
 

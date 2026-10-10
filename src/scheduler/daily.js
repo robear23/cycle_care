@@ -1,13 +1,13 @@
 const cron = require('node-cron');
 const { prisma } = require('../lib/prisma');
-const { calculatePhase } = require('../lib/cycle');
-const { getDailyMessage } = require('../lib/messages');
+const { buildBriefing } = require('../lib/briefing');
+const { nextSendAt, dueAction } = require('../lib/sendSchedule');
 const { bot } = require('../bot/index');
 const { checkUserCycleReminder } = require('./reminders');
 const { checkAndNurtureLeads } = require('./nurture');
 
-
-const { DateTime } = require('luxon');
+// Users who should currently receive daily briefings.
+const SENDABLE = { subscription_status: { in: ['trial', 'active'] }, pregnancy_mode: false };
 
 function startScheduler() {
     console.log('Scheduler started...');
@@ -21,75 +21,73 @@ function startScheduler() {
         }
     });
 
-    // Run every minute
     cron.schedule('* * * * *', async () => {
-        // Current UTC time
-        const nowUtc = DateTime.utc();
-
-        // We want to find users where their LOCAL time matches their notification_time.
-        let users;
         try {
-            users = await prisma.user.findMany({
-                where: { subscription_status: { in: ['trial', 'active'] }, pregnancy_mode: false }
-            });
+            await sendDueBriefings();
         } catch (err) {
             console.error('Error loading users for daily messages:', err);
-            return;
         }
-
-        users.forEach(async (user) => {
-            try {
-                const userTz = user.timezone || 'UTC';
-
-                // Get current time in user's timezone
-                // Luxon setZone converts the instant to the new zone
-                const userTime = nowUtc.setZone(userTz);
-
-                // Format to HH:mm
-                const currentLocalTime = userTime.toFormat('HH:mm');
-
-                if (currentLocalTime === user.notification_time) {
-                    console.log(`Sending message to ${user.telegram_chat_id} at ${currentLocalTime} ${userTz}`);
-                    await sendDailyMessage(user);
-                }
-            } catch (err) {
-                console.error(`Error processing user ${user.id}:`, err);
-            }
-        });
     });
 }
 
-async function sendDailyMessage(user) {
-    const { phase, day, fertility } = calculatePhase(user.cycle_start_date, user.cycle_length);
-    const message = await getDailyMessage(user.id, phase);
+async function sendDueBriefings(now = new Date()) {
+    const users = await prisma.user.findMany({
+        where: {
+            ...SENDABLE,
+            OR: [{ next_send_at: null }, { next_send_at: { lte: now } }]
+        }
+    });
 
-    if (message) {
-        const rawPartnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : null;
-        const displayPhase = phase.charAt(0).toUpperCase() + phase.slice(1);
-        const body = message.message_text.replace(/\[Partner\]/g, (match, offset) => {
-            if (rawPartnerName) return rawPartnerName;
-            return offset === 0 ? 'Your partner' : 'your partner';
-        });
-        const text = `Day ${day} • ${displayPhase} • Fertility: ${fertility}\n\n` + body;
-
+    for (const user of users) {
         try {
-            await bot.sendMessage(user.telegram_chat_id, text);
-
-            // Log it
-            await prisma.messageLog.create({
-                data: {
-                    user_id: user.id,
-                    message_id: message.id
-                }
-            });
-            console.log(`Sent message to user ${user.id}`);
-
-            // Check if we also need to append a cycle-end reminder
-            await checkUserCycleReminder(user);
-        } catch (e) {
-            console.error(`Failed to send to user ${user.id}`, e);
+            await processDueUser(user, now);
+        } catch (err) {
+            console.error(`Error processing user ${user.id}:`, err);
         }
     }
 }
 
-module.exports = { startScheduler };
+async function processDueUser(user, now) {
+    const action = dueAction(user, now);
+
+    // Claim the slot before sending so an overlapping tick or a second
+    // instance can't send the same briefing twice.
+    // Re-checking status skips users who sent /stop since the batch was loaded.
+    const claimed = await prisma.user.updateMany({
+        where: { ...SENDABLE, id: user.id, next_send_at: user.next_send_at },
+        data: { next_send_at: nextSendAt(user, now) }
+    });
+    if (claimed.count === 0 || action !== 'send') return;
+
+    await sendDailyMessage(user, now);
+}
+
+// Telegram answers 403 when the user blocked the bot or deleted their account.
+function isBlockedByUser(err) {
+    return err.response && err.response.statusCode === 403;
+}
+
+async function sendDailyMessage(user, now) {
+    const briefing = await buildBriefing(user, now);
+    if (!briefing) return;
+
+    try {
+        await bot.sendMessage(user.telegram_chat_id, briefing.text);
+    } catch (err) {
+        if (isBlockedByUser(err)) {
+            await prisma.user.update({ where: { id: user.id }, data: { subscription_status: 'cancelled' } });
+            console.log(`User ${user.id} blocked the bot; marked cancelled`);
+            return;
+        }
+        throw err;
+    }
+
+    await prisma.messageLog.create({
+        data: { user_id: user.id, message_id: briefing.messageId }
+    });
+    console.log(`Sent message to user ${user.id}`);
+
+    await checkUserCycleReminder(user, now);
+}
+
+module.exports = { startScheduler, sendDueBriefings };

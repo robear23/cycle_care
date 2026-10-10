@@ -1,7 +1,9 @@
 const { prisma } = require('../lib/prisma');
 const { botLink } = require('../lib/botLink');
-const { calculatePhase, getUpcomingPhasesRanges } = require('../lib/cycle');
-const { parseCycleRange } = require('./onboarding');
+const { getUpcomingPhasesRanges, getPhaseRanges } = require('../lib/cycle');
+const { partnerName, cycleStatus, buildBriefing } = require('../lib/briefing');
+const { userToday, addDays, formatCalendarDate } = require('../lib/dates');
+const { parseCycleRange, CYCLE_RANGE_HINT } = require('./onboarding');
 const { PREGNANCY_PAUSED_TEXT } = require('./pregnancy');
 const { TODAY_YESTERDAY_ROW, OTHER_DATE_BUTTON } = require('./periodStart');
 
@@ -17,8 +19,6 @@ async function handleUpdate(bot, msg) {
         return;
     }
 
-    const partnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : 'Your partner';
-
     const opts = {
         reply_markup: {
             inline_keyboard: [
@@ -28,7 +28,7 @@ async function handleUpdate(bot, msg) {
         }
     };
 
-    await bot.sendMessage(chatId, `When did ${partnerName}'s new cycle start?`, opts);
+    await bot.sendMessage(chatId, `When did ${partnerName(user) || 'your partner'}'s new cycle start?`, opts);
 }
 
 async function handleToday(bot, msg) {
@@ -45,26 +45,8 @@ async function handleToday(bot, msg) {
         return;
     }
 
-    const { phase, day, fertility } = calculatePhase(user.cycle_start_date, user.cycle_length);
-
-    // Fetch a message for this phase
-    // For MVP, just picking one random message from DB
-    const message = await prisma.message.findFirst({
-        where: { phase: phase },
-        // Random offset? Or just first for now.
-        // Prisma doesn't support random() natively easily.
-        // We can fetch all IDs and pick one.
-    });
-
-    const rawPartnerName = (user.partner_name && user.partner_name.toLowerCase() !== 'skip' && user.partner_name !== '/start') ? user.partner_name : null;
-    const displayPhase = phase.charAt(0).toUpperCase() + phase.slice(1);
-    const body = message ? message.message_text.replace(/\[Partner\]/g, (match, offset) => {
-        if (rawPartnerName) return rawPartnerName;
-        return offset === 0 ? 'Your partner' : 'your partner';
-    }) : null;
-    const text = body ? `Day ${day} • ${displayPhase} • Fertility: ${fertility}\n\n` + body : "No message found for today.";
-
-    await bot.sendMessage(chatId, text);
+    const briefing = await buildBriefing(user);
+    await bot.sendMessage(chatId, briefing ? briefing.text : "No message found for today.");
 }
 
 async function handlePhase(bot, msg) {
@@ -81,36 +63,39 @@ async function handlePhase(bot, msg) {
         return;
     }
 
-    const { phase, day } = calculatePhase(user.cycle_start_date, user.cycle_length);
+    const { phase, day } = cycleStatus(user);
     await bot.sendMessage(chatId, `Current Status:\nDay: ${day}\nPhase: ${phase}`);
 }
 
+const LEARN_TOPICS = {
+    menstrual: { emoji: '🩸', title: 'Menstrual Phase', text: 'The uterus sheds its lining. Energy is lowest. Focus on rest and comfort.' },
+    follicular: { emoji: '🌱', title: 'Follicular Phase', text: 'Estrogen rises. Energy and mood improve. Great time for new activities.' },
+    ovulation: { emoji: '✨', title: 'Ovulation Phase', text: 'Peak energy and confidence. Libido may be higher.' },
+    luteal: { emoji: '🍂', title: 'Luteal Phase', text: 'Progesterone rises then drops. PMS symptoms (mood swings, bloating) may appear. Patience is key.' }
+};
+
 async function handleLearn(bot, msg, match) {
-    const chatId = msg.chat.id;
+    const chatId = msg.chat.id.toString();
     const topic = match && match[1] ? match[1].trim().toLowerCase() : null;
 
     if (!topic) {
         return bot.sendMessage(chatId, "What would you like to learn about? Try:\n/learn menstrual\n/learn follicular\n/learn ovulation\n/learn luteal");
     }
 
-    let content = "";
-    switch (topic) {
-        case 'menstrual':
-            content = "🩸 *Menstrual Phase (Days 1-5)*\nThe uterus sheds its lining. Energy is lowest. Focus on rest and comfort.";
-            break;
-        case 'follicular':
-            content = "🌱 *Follicular Phase (Days 6-13)*\nEstrogen rises. Energy and mood improve. Great time for new activities.";
-            break;
-        case 'ovulation':
-            content = "✨ *Ovulation Phase (Days 14-16)*\nPeak energy and confidence. Libido may be higher.";
-            break;
-        case 'luteal':
-            content = "🍂 *Luteal Phase (Days 17-28)*\nProgesterone rises then drops. PMS symptoms (mood swings, bloating) may appear. Patience is key.";
-            break;
-        default:
-            content = "I don't have info on that yet. Try one of the phases: menstrual, follicular, ovulation, luteal.";
+    const info = LEARN_TOPICS[topic];
+    if (!info) {
+        return bot.sendMessage(chatId, "I don't have info on that yet. Try one of the phases: menstrual, follicular, ovulation, luteal.");
     }
-    await bot.sendMessage(chatId, content, { parse_mode: 'Markdown' });
+
+    // Day ranges follow the user's own cycle length when we know it.
+    const user = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
+    const cycleLength = user ? user.cycle_length : 28;
+    const range = getPhaseRanges(cycleLength, user ? user.period_duration : 5)[topic];
+    const days = range.end < range.start
+        ? `very short in a ${cycleLength}-day cycle`
+        : range.start === range.end ? `Day ${range.start}` : `Days ${range.start}-${range.end}`;
+
+    await bot.sendMessage(chatId, `${info.emoji} *${info.title} (${days})*\n${info.text}\n\n_Based on a ${cycleLength}-day cycle. Estimates only — not medical advice._`, { parse_mode: 'Markdown' });
 }
 
 async function handleSubscription(bot, msg) {
@@ -119,7 +104,10 @@ async function handleSubscription(bot, msg) {
 
     if (!user) return;
 
-    let text = `Your subscription status: *ACTIVE*\n\nCycleCare is a free tool! You have full lifetime access.`;
+    const paused = ['paused', 'cancelled'].includes(user.subscription_status);
+    const text = paused
+        ? `Your daily messages are *PAUSED*. Send /resume to turn them back on.\n\nCycleCare is a free tool — you have full lifetime access.`
+        : `Your daily messages are *ON*. Send /stop to pause them.\n\nCycleCare is a free tool — you have full lifetime access.`;
 
     await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
 }
@@ -175,7 +163,7 @@ async function handleCycleLengthMessage(bot, msg) {
 
     const cycleRange = parseCycleRange(text);
     if (!cycleRange) {
-        await bot.sendMessage(chatId, "I couldn't understand that. Please enter a number or range like '28' or '28-34' (between 14 and 60), or type 'cancel'.");
+        await bot.sendMessage(chatId, `I couldn't understand that. Please enter a number or range like '28' or '28-34' (${CYCLE_RANGE_HINT}), or type 'cancel'.`);
         return true;
     }
 
@@ -211,17 +199,15 @@ async function handleWeekends(bot, msg) {
         return;
     }
 
-    const { luteal, menstrual } = getUpcomingPhasesRanges(user.cycle_start_date, user.cycle_length);
+    const { luteal, menstrual } = getUpcomingPhasesRanges(user.cycle_start_date, user.cycle_length, userToday(user.timezone), user.period_duration);
 
     const getWeekendsInRange = (start, end) => {
         const weekends = [];
-        const current = new Date(start);
-        while (current <= end) {
-            const day = current.getDay();
+        for (let current = start; current <= end; current = addDays(current, 1)) {
+            const day = current.getUTCDay();
             if (day === 0 || day === 6) { // Sunday = 0, Saturday = 6
-                weekends.push(new Date(current));
+                weekends.push(current);
             }
-            current.setDate(current.getDate() + 1);
         }
         return weekends;
     };
@@ -230,7 +216,7 @@ async function handleWeekends(bot, msg) {
     const menstrualWeekends = getWeekendsInRange(menstrual.start, menstrual.end);
 
     const formatDate = (date) => {
-        return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        return formatCalendarDate(date, { weekday: 'short', day: 'numeric', month: 'short' });
     };
 
     let text = "🗓 *Upcoming Phase Weekends*\n\n";
@@ -259,19 +245,24 @@ async function handleWeekends(bot, msg) {
 }
 
 async function handleHelp(bot, msg) {
-    const helpText = `
-/start - Start onboarding
+    let helpText = `/start - Start onboarding
 /update - Update cycle start date
 /cyclelength - View or update cycle length range
 /today - Get today's message
 /phase - Get current phase info
 /weekends - Get upcoming luteal/menstrual weekends
-/resume - Resume tracking after pregnancy
+/resume - Resume daily messages (after /stop or pregnancy)
 /learn - Learn about cycle phases
-/subscription - Manage subscription
+/subscription - Check your message status
 /refer - Share CycleCare
+/stop - Pause daily messages
+/delete - Permanently delete your data
 /help - Show this help
-  `;
+
+CycleCare gives estimates only. It is not medical advice and must not be used as contraception.`;
+    if (process.env.PUBLIC_SITE_URL) {
+        helpText += `\n\nPrivacy policy: ${process.env.PUBLIC_SITE_URL}/privacy`;
+    }
     await bot.sendMessage(msg.chat.id, helpText);
 }
 
@@ -285,5 +276,6 @@ module.exports = {
     handleRefer,
     handleCycleLength,
     handleWeekends,
-    handleCycleLengthMessage
+    handleCycleLengthMessage,
+    cycleLengthState
 };

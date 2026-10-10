@@ -1,6 +1,6 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { calculatePhase, getUpcomingPhasesRanges } = require('./cycle');
+const { calculatePhase, getUpcomingPhasesRanges, getPhaseRanges } = require('./cycle');
 
 describe('Cycle Phase Calculation', () => {
 
@@ -113,12 +113,9 @@ describe('Cycle Phase Calculation', () => {
     });
 });
 
+// Phase ranges are calendar dates at UTC midnight.
 function formatLocalDate(date) {
-    const d = new Date(date);
-    const month = '' + (d.getMonth() + 1);
-    const day = '' + d.getDate();
-    const year = d.getFullYear();
-    return [year, month.padStart(2, '0'), day.padStart(2, '0')].join('-');
+    return new Date(date).toISOString().slice(0, 10);
 }
 
 describe('getUpcomingPhasesRanges', () => {
@@ -138,5 +135,35 @@ describe('getUpcomingPhasesRanges', () => {
         // End: Oct 1 + 32 days = Nov 02
         assert.strictEqual(formatLocalDate(ranges.menstrual.start), '2023-10-29');
         assert.strictEqual(formatLocalDate(ranges.menstrual.end), '2023-11-02');
+    });
+});
+
+describe('getPhaseRanges', () => {
+    test('28-day cycle matches the product spec', () => {
+        assert.deepStrictEqual(getPhaseRanges(28), {
+            menstrual: { start: 1, end: 5 },
+            follicular: { start: 6, end: 13 },
+            ovulation: { start: 14, end: 16 },
+            luteal: { start: 17, end: 28 }
+        });
+    });
+
+    test('longer menstrual phase uses period_duration', () => {
+        const result = calculatePhase(new Date('2023-10-01'), 28, new Date('2023-10-07'), 7);
+        assert.strictEqual(result.phase, 'menstrual');
+    });
+
+    test('21-day cycle (the minimum) still has an ovulation window', () => {
+        const ranges = getPhaseRanges(21);
+        assert.deepStrictEqual(ranges.ovulation, { start: 6, end: 8 });
+        assert.deepStrictEqual(ranges.luteal, { start: 9, end: 21 });
+    });
+});
+
+describe('Timezone safety', () => {
+    test('day count uses calendar dates regardless of time of day', () => {
+        // Start stored as UTC midnight; target late in the UTC day is still the same calendar day.
+        const result = calculatePhase(new Date('2023-10-01T00:00:00Z'), 28, new Date('2023-10-03T23:59:00Z'));
+        assert.strictEqual(result.day, 3);
     });
 });
