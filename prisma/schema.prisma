@@ -10,7 +10,8 @@ datasource db {
 model User {
   id                Int      @id @default(autoincrement())
   telegram_chat_id  String   @unique
-  email             String?  @unique
+  // Unverified, so not unique: anyone could otherwise claim someone else's address.
+  email             String?
   partner_name      String?
   cycle_start_date  DateTime
   cycle_length      Int      @default(28)
@@ -23,9 +24,13 @@ model User {
   pregnancy_mode    Boolean  @default(false)
   referral_code     String?  @unique
   referred_by       String?
+  // UTC instant of the next daily briefing; null means "schedule on the next tick".
+  next_send_at      DateTime?
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
   message_logs      MessageLog[]
+
+  @@index([next_send_at])
 }
 
 model Message {
@@ -40,7 +45,7 @@ model Message {
 model MessageLog {
   id         Int      @id @default(autoincrement())
   user_id    Int
-  user       User     @relation(fields: [user_id], references: [id])
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   message_id Int
   message    Message  @relation(fields: [message_id], references: [id])
   sent_at    DateTime @default(now())
@@ -50,5 +55,7 @@ model WaitlistLead {
   id         Int      @id @default(autoincrement())
   email      String   @unique
   nurtured   Boolean  @default(false)
+  // Short /start payload linking this lead to a Telegram signup (emails can exceed Telegram's 64-char limit).
+  start_token String? @unique
   created_at DateTime @default(now())
 }
