@@ -1,12 +1,11 @@
 const cron = require('node-cron');
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../lib/prisma');
 const { calculatePhase } = require('../lib/cycle');
 const { getDailyMessage } = require('../lib/messages');
 const { bot } = require('../bot/index');
 const { checkUserCycleReminder } = require('./reminders');
 const { checkAndNurtureLeads } = require('./nurture');
 
-const prisma = new PrismaClient();
 
 const { DateTime } = require('luxon');
 

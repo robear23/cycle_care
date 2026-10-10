@@ -1,9 +1,8 @@
 const { DateTime } = require('luxon');
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../lib/prisma');
 const { bot } = require('../bot/index');
 const { handlePregnancyCallback } = require('../bot/pregnancy');
 const { TODAY_YESTERDAY_ROW, OTHER_DATE_BUTTON, handlePeriodStartCallback } = require('../bot/periodStart');
-const prisma = new PrismaClient();
 
 async function checkUserCycleReminder(user) {
     // We expect this to run once a day per user, right around their notification time.

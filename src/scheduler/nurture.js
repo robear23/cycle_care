@@ -1,8 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../lib/prisma');
+const { botLink } = require('../lib/botLink');
 const { Resend } = require('resend');
 const { DateTime } = require('luxon');
 
-const prisma = new PrismaClient();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 async function checkAndNurtureLeads() {
@@ -54,7 +54,7 @@ async function checkAndNurtureLeads() {
                         <p>It takes less than 30 seconds to set up, and you'll start receiving your daily support briefings immediately.</p>
                         
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="https://t.me/cycle_care_bot" style="background-color: #3d5c31; color: white; padding: 14px 28px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px; display: inline-block;">Connect now on Telegram</a>
+                            <a href="${botLink()}" style="background-color: #3d5c31; color: white; padding: 14px 28px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px; display: inline-block;">Connect now on Telegram</a>
                         </div>
                         
                         <p>If you have any questions, just reply to this email!</p>

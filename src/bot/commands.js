@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('../lib/prisma');
+const { botLink } = require('../lib/botLink');
 const { calculatePhase, getUpcomingPhasesRanges } = require('../lib/cycle');
 const { parseCycleRange } = require('./onboarding');
 const { PREGNANCY_PAUSED_TEXT } = require('./pregnancy');
@@ -96,16 +96,16 @@ async function handleLearn(bot, msg, match) {
     let content = "";
     switch (topic) {
         case 'menstrual':
-            content = "🩸 **Menstrual Phase (Days 1-5)**\nThe uterus sheds its lining. Energy is lowest. Focus on rest and comfort.";
+            content = "🩸 *Menstrual Phase (Days 1-5)*\nThe uterus sheds its lining. Energy is lowest. Focus on rest and comfort.";
             break;
         case 'follicular':
-            content = "🌱 **Follicular Phase (Days 6-13)**\nEstrogen rises. Energy and mood improve. Great time for new activities.";
+            content = "🌱 *Follicular Phase (Days 6-13)*\nEstrogen rises. Energy and mood improve. Great time for new activities.";
             break;
         case 'ovulation':
-            content = "✨ **Ovulation Phase (Days 14-16)**\nPeak energy and confidence. Libido may be higher.";
+            content = "✨ *Ovulation Phase (Days 14-16)*\nPeak energy and confidence. Libido may be higher.";
             break;
         case 'luteal':
-            content = "🍂 **Luteal Phase (Days 17-28)**\nProgesterone rises then drops. PMS symptoms (mood swings, bloating) may appear. Patience is key.";
+            content = "🍂 *Luteal Phase (Days 17-28)*\nProgesterone rises then drops. PMS symptoms (mood swings, bloating) may appear. Patience is key.";
             break;
         default:
             content = "I don't have info on that yet. Try one of the phases: menstrual, follicular, ovulation, luteal.";
@@ -139,8 +139,8 @@ async function handleRefer(bot, msg) {
         });
     }
 
-    const link = `https://t.me/CycleCareBot?start=${code}`;
-    await bot.sendMessage(chatId, `Here is your referral link:\n${link}\n\nShare this to give friends a 14-day trial!`);
+    const link = botLink(code);
+    await bot.sendMessage(chatId, `Here is your referral link:\n${link}\n\nShare it with friends — CycleCare is free!`);
 }
 
 async function handleCycleLength(bot, msg) {
@@ -233,26 +233,26 @@ async function handleWeekends(bot, msg) {
         return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     };
 
-    let text = "🗓 **Upcoming Phase Weekends**\n\n";
+    let text = "🗓 *Upcoming Phase Weekends*\n\n";
 
     if (lutealWeekends.length > 0) {
-        text += "🍂 **Luteal Phase:**\n";
+        text += "🍂 *Luteal Phase:*\n";
         lutealWeekends.forEach(d => {
             text += `• ${formatDate(d)}\n`;
         });
     } else {
-        text += "🍂 **Luteal Phase:** No weekends in this phase.\n";
+        text += "🍂 *Luteal Phase:* No weekends in this phase.\n";
     }
 
     text += "\n";
 
     if (menstrualWeekends.length > 0) {
-        text += "🩸 **Next Menstrual Phase:**\n";
+        text += "🩸 *Next Menstrual Phase:*\n";
         menstrualWeekends.forEach(d => {
             text += `• ${formatDate(d)}\n`;
         });
     } else {
-        text += "🩸 **Next Menstrual Phase:** No weekends in this phase.\n";
+        text += "🩸 *Next Menstrual Phase:* No weekends in this phase.\n";
     }
 
     await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });

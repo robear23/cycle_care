@@ -4,11 +4,11 @@ const path = require('path');
 const { initBot, bot } = require('./bot/index');
 const { startScheduler } = require('./scheduler/daily');
 const apiRoutes = require('./api/routes');
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('./lib/prisma');
+const { botLink } = require('./lib/botLink');
 const { Resend } = require('resend');
 
 const app = express();
-const prisma = new PrismaClient();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const PORT = process.env.PORT || 3000;
@@ -51,7 +51,7 @@ app.post('/api/waitlist', async (req, res) => {
                         <p>If you haven't finished setting up your daily briefing yet, it takes less than 30 seconds to get started. Just click the button below to open your secure Telegram assistant:</p>
                         
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="https://t.me/cycle_care_bot" style="background-color: #3d5c31; color: white; padding: 14px 28px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px; display: inline-block;">Open CycleCare in Telegram</a>
+                            <a href="${botLink()}" style="background-color: #3d5c31; color: white; padding: 14px 28px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px; display: inline-block;">Open CycleCare in Telegram</a>
                         </div>
                         
                         <h3 style="color: #4b5563;">What happens next?</h3>
@@ -80,7 +80,7 @@ app.post('/api/waitlist', async (req, res) => {
 
     // Automatically redirect the user to the Telegram Bot with email pre-filled
     const encodedEmail = Buffer.from(email).toString('base64url');
-    res.redirect(`https://t.me/cycle_care_bot?start=${encodedEmail}`);
+    res.redirect(botLink(encodedEmail));
 });
 const { handleReminderCallbacks } = require('./scheduler/reminders');
 

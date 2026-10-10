@@ -5,7 +5,7 @@ Audit date: 2026-10-10. Work through in the order of the "Suggested order" secti
 ## Suggested order
 
 1. [x] Critical 1–2 — referral crash + handler error handling
-2. [ ] Shared Prisma client, bot username, "trial" copy, `**` Markdown fix
+2. [x] Shared Prisma client, bot username, "trial" copy, `**` Markdown fix
 3. [ ] Critical 5 — `/stop`, `/delete`, privacy page
 4. [ ] Timezone-correct dates + reliable daily send
 5. [ ] Critical 3–4 (email abuse / lock-out), then website polish
@@ -20,14 +20,14 @@ Audit date: 2026-10-10. Work through in the order of the "Suggested order" secti
 
 ## 🟠 Bugs & reliability
 
-- [ ] `/refer` link uses `CycleCareBot`; everywhere else uses `cycle_care_bot` → move to an env var (`commands.js:142`)
-- [ ] `/refer` copy says "14-day trial"; site says "Free Forever" (`commands.js:143`)
+- [x] `/refer` link uses `CycleCareBot`; everywhere else uses `cycle_care_bot` → move to an env var (`commands.js:142`)
+- [x] `/refer` copy says "14-day trial"; site says "Free Forever" (`commands.js:143`)
 - [ ] Day boundaries use server-local (UTC) time, not the user's timezone, so they can be off by a day; "today/yesterday" buttons are too (`cycle.js:12`, `periodStart.js:39`)
 - [ ] Ignored reminders → stuck on "Day 60 • Luteal • Fertility: Low" forever; keep nudging after the window, show overdue state (`reminders.js:21`, `cycle.js:33`)
 - [ ] Daily send needs an exact cron minute — a restart at send time means no message that day. Add `last_sent_date`, send when local time is at or past the chosen time (`daily.js:46`)
 - [ ] Scheduler loads every user from the DB every minute — filter in the query (`daily.js:31`)
 - [ ] Users who blocked the bot get an error every day → mark `cancelled` on 403 (`daily.js:85`)
-- [ ] `**bold**` doesn't render in Telegram legacy Markdown (`/weekends`, `/learn`)
+- [x] `**bold**` doesn't render in Telegram legacy Markdown (`/weekends`, `/learn`)
 - [ ] `/today` always returns the same message for a phase — reuse `getDailyMessage` (`commands.js:52`)
 - [ ] `/learn` hard-codes 28-day ranges
 - [ ] 14–18 day cycles never show follicular/ovulation — raise the minimum to about 21 or handle short cycles
@@ -40,7 +40,7 @@ Audit date: 2026-10-10. Work through in the order of the "Suggested order" secti
 
 ## 🟡 Infra & code health
 
-- [ ] 7 separate `PrismaClient` instances → one shared client (connection pool exhaustion)
+- [x] 7 separate `PrismaClient` instances → one shared client (connection pool exhaustion)
 - [ ] Migrations are stale SQLite (`migration_lock.toml` = sqlite) while datasource is Postgres; `start` runs `db push`. Pick `prisma migrate deploy`.
 - [ ] `Procfile` and `npm start` disagree on `db push`
 - [ ] Polling fails with >1 instance (409) — switch to webhook + `secret_token` before scaling
@@ -62,3 +62,8 @@ Audit date: 2026-10-10. Work through in the order of the "Suggested order" secti
 ## Follow-ups found during step 1
 
 - [ ] `onboarding.js` save-error path: if its own error `sendMessage` throws, `onboardingState.delete` is skipped and the chat stays stuck in onboarding — move the delete into a `finally`
+
+## Notes from step 2
+
+- Bot username now comes from `TELEGRAM_BOT_USERNAME` (falls back to `cycle_care_bot`). Set it in production env.
+- `prisma/seed.js` and `fix-time.js` still create their own `PrismaClient` — they run as separate processes, so that's fine (`fix-time.js` is slated for deletion anyway).

@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('../lib/prisma');
 const chrono = require('chrono-node');
 
 // In-memory state for typing a custom period start date: { [chatId]: true }

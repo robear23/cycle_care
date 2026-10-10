@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('../lib/prisma');
 const chrono = require('chrono-node');
 const { DateTime } = require('luxon');
 const cityTimezones = require('city-timezones');

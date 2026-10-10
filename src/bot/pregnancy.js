@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('../lib/prisma');
 const { TODAY_YESTERDAY_ROW, OTHER_DATE_BUTTON } = require('./periodStart');
 
 const PREGNANCY_PAUSED_TEXT = "Pregnancy mode is on, so cycle tracking is paused. When you're ready to start again, send /resume.";
