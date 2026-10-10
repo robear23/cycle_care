@@ -7,6 +7,19 @@
     <title>CycleCare | A quiet heads-up for her biggest days</title>
     <meta name="description"
         content="A quiet, automated Telegram assistant that gives you the heads-up exactly when you need it.">
+    <link rel="canonical" href="{{SITE_URL}}/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="CycleCare">
+    <meta property="og:title" content="CycleCare | A quiet heads-up for her biggest days">
+    <meta property="og:description" content="A free Telegram assistant that sends you one short daily briefing on your partner's cycle phase, so you can support her better.">
+    <meta property="og:url" content="{{SITE_URL}}/">
+    <meta property="og:image" content="{{SITE_URL}}/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CycleCare | A quiet heads-up for her biggest days">
+    <meta name="twitter:description" content="A free Telegram assistant that sends you one short daily briefing on your partner's cycle phase, so you can support her better.">
+    <meta name="twitter:image" content="{{SITE_URL}}/og-image.jpg">
     <link rel="stylesheet" href="/styles.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' fill='%238B5CF6'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +29,7 @@
 
 <body>
     <div class="background-container">
-        <video autoplay muted loop playsinline class="background-video">
+        <video autoplay muted loop playsinline preload="metadata" poster="/hero-poster.webp" class="background-video" aria-hidden="true">
             <source src="/Light_ribbon_moves_in_pattern_be01e75d41.mp4" type="video/mp4">
         </video>
         <div class="noise-overlay"></div>
@@ -47,11 +60,12 @@
                 <span class="badge-dot"></span> Free Forever
             </div>
             <h1>A quiet heads-up for<br>her biggest days</h1>
-            <p>A quiet, automated Telegram assistant that gives you the heads-up exactly when you need it. Support them
+            <p>A quiet, automated Telegram assistant that gives you the heads-up exactly when you need it. Support her
                 better without the guesswork.</p>
             <div class="hero-cta-container">
                 <form action="/api/waitlist" method="POST" class="hero-email-form">
-                    <input type="email" name="email" placeholder="Enter your email to begin" required>
+                    <label for="hero-email" class="sr-only">Email address</label>
+                    <input type="email" id="hero-email" name="email" placeholder="Enter your email to begin" autocomplete="email" maxlength="254" required>
                     <button type="submit">
                         Open in Telegram
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -61,6 +75,7 @@
                     </button>
                 </form>
                 <p class="hero-note">No spam. We'll instantly redirect you to CycleCare on Telegram.</p>
+                <a href="/start" class="hero-direct-link">Or skip the email and open Telegram directly →</a>
             </div>
         </div>
 
@@ -70,7 +85,7 @@
                     <div class="feature-icon">🗓️</div>
                 </div>
                 <h3>Daily Briefing</h3>
-                <p>Receive a single, concise message each morning summarizing their current cycle phase.</p>
+                <p>Receive a single, concise message each morning summarizing her current cycle phase.</p>
             </div>
             <div class="feature-card glass">
                 <div class="feature-icon-wrapper">
@@ -84,7 +99,7 @@
                     <div class="feature-icon">🔒</div>
                 </div>
                 <h3>100% Private</h3>
-                <p>We don't sell data or run ads. Your tracking is secure, private, and yours alone.</p>
+                <p>We don't sell data or run ads. Pause with /stop or erase everything with /delete at any time. <a href="/privacy">Privacy policy</a></p>
             </div>
         </div>
 
@@ -160,7 +175,7 @@
                         
                         <div class="tg-message-wrapper mt-4">
                             <div class="tg-message tg-bot">
-                                Day 14 • Ovulation • Fertility: Peak ✨<br><br>Peak energy and confidence today. A great day for a date night!
+                                Day 14 • Ovulation • Fertility: High ✨<br><br>Peak energy and confidence today. A great day for a date night!
                                 <span class="tg-time">09:00</span>
                             </div>
                         </div>
@@ -181,13 +196,42 @@
                 </div>
             </div>
         </div>
+        <div class="faq">
+            <h2 class="section-title">FAQ</h2>
+            <details class="faq-item glass">
+                <summary>Is it really free?</summary>
+                <p>Yes. CycleCare is free, with no trial and no paid tier. We don't run ads or sell data.</p>
+            </details>
+            <details class="faq-item glass">
+                <summary>What information do you store?</summary>
+                <p>Your Telegram chat ID, your email if you give it, your partner's first name if you give it, her cycle start date and typical cycle length, your timezone and preferred message time. Details are in our <a href="/privacy">privacy policy</a>.</p>
+            </details>
+            <details class="faq-item glass">
+                <summary>How accurate is it?</summary>
+                <p>CycleCare estimates phases from the dates you give it. Every body is different and cycles vary, so treat it as a friendly heads-up, not a precise prediction.</p>
+            </details>
+            <details class="faq-item glass">
+                <summary>Can I use it to avoid or plan a pregnancy?</summary>
+                <p>No. CycleCare is not a medical device or a contraceptive. Fertility levels shown are rough estimates and must not be relied on for contraception or conception.</p>
+            </details>
+            <details class="faq-item glass">
+                <summary>How do I stop messages or delete my data?</summary>
+                <p>Send <code>/stop</code> to the bot to pause daily messages, or <code>/delete</code> to permanently erase everything we hold about you.</p>
+            </details>
+        </div>
+
+        <p class="disclaimer">CycleCare provides general information and estimates only. It is not medical advice, and it must not be used as contraception or to diagnose any condition.</p>
     </main>
 
     <footer>
         <p>&copy; 2026 CycleCare. Built with 💜.</p>
+        <nav class="footer-links" aria-label="Legal">
+            <a href="/privacy">Privacy policy</a>
+            <a href="/terms">Terms of use</a>
+        </nav>
         <a href="https://foresttechsolutions.net/" target="_blank" rel="noopener noreferrer" class="footer-logo">
             <span>An app developed by</span>
-            <img src="/foresttech_logo.png" alt="ForestTech Solutions" class="footer-img">
+            <img src="/foresttech_logo.webp" alt="ForestTech Solutions" class="footer-img" width="100" height="100" loading="lazy">
         </a>
     </footer>
 </body>
