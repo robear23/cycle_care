@@ -50,24 +50,34 @@ async function checkUserCycleReminder(user) {
 function handleReminderCallbacks(bot) {
     bot.on('callback_query', async (callbackQuery) => {
         const action = callbackQuery.data;
-        const msg = callbackQuery.message;
-        const chatId = msg.chat.id.toString();
-
-        const user = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
-        if (!user) return;
-
-        try {
-            if (await handlePeriodStartCallback(bot, callbackQuery)) return;
-            if (await handlePregnancyCallback(bot, callbackQuery)) return;
-        } catch (e) {
-            console.error(`Failed to handle callback for user ${user.id}`, e);
-            await bot.sendMessage(chatId, "Something went wrong. Please try again.");
+        // Telegram omits the message for inline-mode or very old messages.
+        if (!callbackQuery.message) {
+            bot.answerCallbackQuery(callbackQuery.id).catch(() => {});
             return;
         }
+        const chatId = callbackQuery.message.chat.id.toString();
 
-        if (action === 'period_not_yet') {
-            await bot.answerCallbackQuery(callbackQuery.id, { text: "Okay, I'll check in again later." });
-            await bot.sendMessage(chatId, "No problem. I'll keep the current cycle going until you update me.");
+        try {
+            const user = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
+            if (!user) {
+                await bot.answerCallbackQuery(callbackQuery.id);
+                return;
+            }
+
+            if (await handlePeriodStartCallback(bot, callbackQuery)) return;
+            if (await handlePregnancyCallback(bot, callbackQuery)) return;
+
+            if (action === 'period_not_yet') {
+                await bot.answerCallbackQuery(callbackQuery.id, { text: "Okay, I'll check in again later." });
+                await bot.sendMessage(chatId, "No problem. I'll keep the current cycle going until you update me.");
+            }
+        } catch (e) {
+            console.error(`Failed to handle callback ${action} for chat ${chatId}`, e);
+            // Clear the button's loading spinner; ignore if it was already answered.
+            bot.answerCallbackQuery(callbackQuery.id).catch(() => {});
+            bot.sendMessage(chatId, "Something went wrong. Please try again.").catch((sendErr) => {
+                console.error(`Failed to send error notice to chat ${chatId}:`, sendErr);
+            });
         }
     });
 }

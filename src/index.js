@@ -84,6 +84,12 @@ app.post('/api/waitlist', async (req, res) => {
 });
 const { handleReminderCallbacks } = require('./scheduler/reminders');
 
+// Last line of defence: log stray async errors instead of letting Node kill the
+// process (and with it the bot, scheduler and website).
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled promise rejection:', reason);
+});
+
 async function main() {
     // Start Bot
     initBot();

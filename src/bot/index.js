@@ -1,4 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
+const { prisma } = require('../lib/prisma');
 const { handleOnboarding, onboardingState } = require('./onboarding');
 const { handleResume } = require('./pregnancy');
 const { handlePeriodDateMessage } = require('./periodStart');
@@ -9,10 +10,25 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 // Polling for local dev, Webhook for prod (later)
 const bot = new TelegramBot(token, { polling: true });
 
+// Every handler runs through this so a DB or Telegram error is logged and
+// reported to the user instead of becoming an unhandled rejection.
+function safely(handler) {
+    return async (msg, ...args) => {
+        try {
+            await handler(msg, ...args);
+        } catch (err) {
+            console.error(`Handler failed for chat ${msg.chat.id}:`, err);
+            bot.sendMessage(msg.chat.id, "Something went wrong. Please try again.").catch((sendErr) => {
+                console.error(`Failed to send error notice to chat ${msg.chat.id}:`, sendErr);
+            });
+        }
+    };
+}
+
 function initBot() {
     console.log('Bot is running...');
 
-    bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
+    bot.onText(/\/start(?:\s+(.+))?/, safely(async (msg, match) => {
         const chatId = msg.chat.id.toString();
         const payload = match[1]?.trim();
         let prefilledEmail = null;
@@ -38,31 +54,31 @@ function initBot() {
             }
         }
         onboardingState.delete(chatId); // reset so handleOnboarding runs the init block
-        handleOnboarding(bot, msg, prefilledEmail, referredBy);
-    });
+        await handleOnboarding(bot, msg, prefilledEmail, referredBy);
+    }));
 
-    bot.onText(/\/cyclelength/, (msg) => handleCycleLength(bot, msg));
-    bot.onText(/\/today/, (msg) => handleToday(bot, msg));
-    bot.onText(/\/phase/, (msg) => handlePhase(bot, msg));
-    bot.onText(/\/help/, (msg) => handleHelp(bot, msg));
-    bot.onText(/\/learn(.+)?/, (msg, match) => handleLearn(bot, msg, match));
-    bot.onText(/\/subscription/, (msg) => handleSubscription(bot, msg));
-    bot.onText(/\/refer/, (msg) => handleRefer(bot, msg));
-    bot.onText(/\/weekends/, (msg) => handleWeekends(bot, msg));
-    bot.onText(/\/update/, (msg) => handleUpdate(bot, msg));
-    bot.onText(/\/resume/, (msg) => handleResume(bot, msg));
+    bot.onText(/\/cyclelength/, safely((msg) => handleCycleLength(bot, msg)));
+    bot.onText(/\/today/, safely((msg) => handleToday(bot, msg)));
+    bot.onText(/\/phase/, safely((msg) => handlePhase(bot, msg)));
+    bot.onText(/\/help/, safely((msg) => handleHelp(bot, msg)));
+    bot.onText(/\/learn(.+)?/, safely((msg, match) => handleLearn(bot, msg, match)));
+    bot.onText(/\/subscription/, safely((msg) => handleSubscription(bot, msg)));
+    bot.onText(/\/refer/, safely((msg) => handleRefer(bot, msg)));
+    bot.onText(/\/weekends/, safely((msg) => handleWeekends(bot, msg)));
+    bot.onText(/\/update/, safely((msg) => handleUpdate(bot, msg)));
+    bot.onText(/\/resume/, safely((msg) => handleResume(bot, msg)));
 
     // Catch-all for text messages to handle conversational flows
-    bot.on('message', async (msg) => {
+    bot.on('message', safely(async (msg) => {
         const chatId = msg.chat.id.toString();
         if (msg.text && !msg.text.startsWith('/')) {
             if (onboardingState.has(chatId)) {
-                handleOnboarding(bot, msg);
+                await handleOnboarding(bot, msg);
             } else if (!(await handlePeriodDateMessage(bot, msg))) {
                 await handleCycleLengthMessage(bot, msg);
             }
         }
-    });
+    }));
 
     return bot;
 }

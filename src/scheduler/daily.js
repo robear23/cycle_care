@@ -28,9 +28,15 @@ function startScheduler() {
         const nowUtc = DateTime.utc();
 
         // We want to find users where their LOCAL time matches their notification_time.
-        const users = await prisma.user.findMany({
-            where: { subscription_status: { in: ['trial', 'active'] }, pregnancy_mode: false }
-        });
+        let users;
+        try {
+            users = await prisma.user.findMany({
+                where: { subscription_status: { in: ['trial', 'active'] }, pregnancy_mode: false }
+            });
+        } catch (err) {
+            console.error('Error loading users for daily messages:', err);
+            return;
+        }
 
         users.forEach(async (user) => {
             try {
