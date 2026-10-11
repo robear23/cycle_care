@@ -78,7 +78,7 @@ Audit date: 2026-10-10. Work through in the order of the "Suggested order" secti
    DATABASE_URL=<prod url> npx prisma migrate resolve --applied 0_init
    ```
    The next deploy then applies `20261010000000_audit_fixes` automatically.
-2. Set env vars: `PUBLIC_SITE_URL`, `TELEGRAM_BOT_USERNAME`, and `TRUST_PROXY` (1 behind Railway/Render). Optional: `TELEGRAM_WEBHOOK_URL` + `TELEGRAM_WEBHOOK_SECRET`.
+2. Set env vars: `PUBLIC_SITE_URL=https://cyclecare.foresttechsolutions.net` (no trailing slash), `TELEGRAM_BOT_USERNAME`, and `TRUST_PROXY` (1 behind Railway/Render). Optional: `TELEGRAM_WEBHOOK_URL` + `TELEGRAM_WEBHOOK_SECRET`.
 3. Have the privacy policy and terms (`public/privacy.html`, `public/terms.html`) reviewed. They're drafts.
 
 ### Design decisions
