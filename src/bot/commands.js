@@ -4,7 +4,7 @@ const { getUpcomingPhasesRanges, getPhaseRanges } = require('../lib/cycle');
 const { partnerName, cycleStatus, buildBriefing } = require('../lib/briefing');
 const { userToday, addDays, formatCalendarDate } = require('../lib/dates');
 const { parseCycleRange, CYCLE_RANGE_HINT } = require('./onboarding');
-const { buildPregnancyUpdate } = require('../lib/pregnancy');
+const { buildPregnancyUpdate, dueDateLine } = require('../lib/pregnancy');
 const { PREGNANCY_PAUSED_TEXT } = require('./pregnancy');
 const { TODAY_YESTERDAY_ROW, OTHER_DATE_BUTTON } = require('./periodStart');
 
@@ -32,9 +32,9 @@ async function handleUpdate(bot, msg) {
     await bot.sendMessage(chatId, `When did ${partnerName(user) || 'your partner'}'s new cycle start?`, opts);
 }
 
-// This week's pregnancy update, or the paused notice outside weeks 4–42.
+// This week's pregnancy update, or the paused notice plus due date in weeks without one.
 function pregnancyStatusText(user) {
-    return buildPregnancyUpdate(user) || PREGNANCY_PAUSED_TEXT;
+    return buildPregnancyUpdate(user) || `${PREGNANCY_PAUSED_TEXT}\n\n${dueDateLine(user)}`;
 }
 
 async function handleToday(bot, msg) {

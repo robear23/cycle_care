@@ -1,6 +1,6 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { estimateDueDate, pregnancyProgress, buildPregnancyUpdate, isPregnancyUpdateDay } = require('./pregnancy');
+const { estimateDueDate, pregnancyProgress, dueDateLine, buildPregnancyUpdate, isPregnancyUpdateDay } = require('./pregnancy');
 
 const user = (overrides) => ({
     cycle_start_date: new Date('2026-01-01'),
@@ -69,12 +69,18 @@ describe('buildPregnancyUpdate', () => {
         assert.match(buildPregnancyUpdate(user(), new Date('2026-10-11T12:00:00Z')), /\(3 days past — any day now\)$/);
     });
 
-    test('has content for every week from 4 to 42 and nothing outside', () => {
-        for (let week = 4; week <= 42; week++) {
+    test('has content for every week from 3 to 42 and nothing outside', () => {
+        for (let week = 3; week <= 42; week++) {
             const now = new Date(Date.UTC(2026, 0, 1 + week * 7, 12));
             assert.ok(buildPregnancyUpdate(user(), now), `week ${week}`);
         }
-        assert.strictEqual(buildPregnancyUpdate(user(), new Date('2026-01-22T12:00:00Z')), null);
+        assert.strictEqual(buildPregnancyUpdate(user(), new Date('2026-01-15T12:00:00Z')), null);
         assert.strictEqual(buildPregnancyUpdate(user(), new Date('2026-10-29T12:00:00Z')), null);
+    });
+});
+
+describe('dueDateLine', () => {
+    test('gives the due date and countdown on its own', () => {
+        assert.strictEqual(dueDateLine(user(), new Date('2026-01-15T12:00:00Z')), '📅 Due date: Thu, 8 Oct 2026 (38 weeks to go)');
     });
 });

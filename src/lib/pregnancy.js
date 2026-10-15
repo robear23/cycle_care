@@ -7,7 +7,8 @@ const STANDARD_CYCLE_LENGTH = 28;
 
 // Sizes are rough averages (crown-to-rump until week 20, crown-to-heel after).
 const WEEKS = {
-    4: { size: 'a poppy seed', measure: 'about 1 mm', baby: 'The embryo has just implanted and the placenta is starting to form.', mum: "She may not feel any different yet, or might notice light spotting, tender breasts and tiredness." },
+    3: { size: 'a grain of sand', measure: 'about 0.1 mm', baby: 'Fertilisation has happened and a tiny ball of cells is on its way to implant in the uterus.', mum: "She probably won't notice much yet — perhaps mild cramps or light spotting as it implants." },
+    4:{ size: 'a poppy seed', measure: 'about 1 mm', baby: 'The embryo has just implanted and the placenta is starting to form.', mum: "She may not feel any different yet, or might notice light spotting, tender breasts and tiredness." },
     5: { size: 'a sesame seed', measure: 'about 2 mm', baby: 'The heart is starting to form, along with the beginnings of the brain and spinal cord.', mum: 'Tiredness, sore breasts and needing to wee more often are common now.' },
     6: { size: 'a lentil', measure: 'about 5 mm', baby: 'A tiny heartbeat has started, and buds that will become arms and legs are appearing.', mum: 'Morning sickness often starts around now — and it can strike at any time of day.' },
     7: { size: 'a blueberry', measure: 'about 1 cm', baby: 'The brain is growing fast, and the face is beginning to take shape.', mum: 'Nausea, food aversions and a heightened sense of smell can make meals tricky.' },
@@ -89,24 +90,30 @@ function countdown(daysToGo) {
     return `${parts.join(', ')} to go`;
 }
 
+// e.g. "📅 Due date: Fri, 25 Jun 2027 (36 weeks, 1 day to go)"
+function dueDateLine(user, now = new Date()) {
+    const { dueDate, daysToGo } = pregnancyProgress(user, now);
+    const dueText = formatCalendarDate(dueDate, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    return `📅 Due date: ${dueText} (${countdown(daysToGo)})`;
+}
+
 /**
  * The update for the pregnancy week the user is currently in.
  *
- * @returns {string | null} null outside the weeks we have content for (4–42)
+ * @returns {string | null} null outside the weeks we have content for (3–42)
  */
 function buildPregnancyUpdate(user, now = new Date()) {
-    const { weeks, dueDate, daysToGo } = pregnancyProgress(user, now);
+    const { weeks } = pregnancyProgress(user, now);
     const week = WEEKS[weeks];
     if (!week) return null;
 
     const name = partnerName(user);
-    const dueText = formatCalendarDate(dueDate, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
     return [
         `🤰 ${weeks} weeks pregnant`,
         `👶 Baby is about the size of ${week.size} (${week.measure}). ${week.baby}`,
         `💜 How ${name || 'your partner'} may be feeling: ${week.mum}`,
-        `📅 Due date: ${dueText} (${countdown(daysToGo)})`
+        dueDateLine(user, now)
     ].join('\n\n');
 }
 
@@ -115,4 +122,4 @@ function isPregnancyUpdateDay(user, now = new Date()) {
     return pregnancyProgress(user, now).days === 0;
 }
 
-module.exports = { estimateDueDate, pregnancyProgress, buildPregnancyUpdate, isPregnancyUpdateDay };
+module.exports = { estimateDueDate, pregnancyProgress, dueDateLine, buildPregnancyUpdate, isPregnancyUpdateDay };
