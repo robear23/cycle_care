@@ -1,13 +1,15 @@
 const cron = require('node-cron');
 const { prisma } = require('../lib/prisma');
 const { buildBriefing } = require('../lib/briefing');
+const { buildPregnancyUpdate, isPregnancyUpdateDay } = require('../lib/pregnancy');
 const { nextSendAt, dueAction } = require('../lib/sendSchedule');
 const { bot } = require('../bot/index');
 const { checkUserCycleReminder } = require('./reminders');
 const { checkAndNurtureLeads } = require('./nurture');
 
-// Users who should currently receive daily briefings.
-const SENDABLE = { subscription_status: { in: ['trial', 'active'] }, pregnancy_mode: false };
+// Users who should currently receive messages: daily briefings, or weekly
+// pregnancy updates while in pregnancy mode.
+const SENDABLE = { subscription_status: { in: ['trial', 'active'] } };
 
 function startScheduler() {
     console.log('Scheduler started...');
@@ -59,7 +61,11 @@ async function processDueUser(user, now) {
     });
     if (claimed.count === 0 || action !== 'send') return;
 
-    await sendDailyMessage(user, now);
+    if (user.pregnancy_mode) {
+        await sendPregnancyUpdate(user, now);
+    } else {
+        await sendDailyMessage(user, now);
+    }
 }
 
 // Telegram answers 403 when the user blocked the bot or deleted their account.
@@ -67,20 +73,36 @@ function isBlockedByUser(err) {
     return err.response && err.response.statusCode === 403;
 }
 
-async function sendDailyMessage(user, now) {
-    const briefing = await buildBriefing(user, now);
-    if (!briefing) return;
-
+// Returns false if the user has blocked the bot (and marks them cancelled).
+async function deliver(user, text) {
     try {
-        await bot.sendMessage(user.telegram_chat_id, briefing.text);
+        await bot.sendMessage(user.telegram_chat_id, text);
+        return true;
     } catch (err) {
         if (isBlockedByUser(err)) {
             await prisma.user.update({ where: { id: user.id }, data: { subscription_status: 'cancelled' } });
             console.log(`User ${user.id} blocked the bot; marked cancelled`);
-            return;
+            return false;
         }
         throw err;
     }
+}
+
+async function sendPregnancyUpdate(user, now) {
+    if (!isPregnancyUpdateDay(user, now)) return;
+    const text = buildPregnancyUpdate(user, now);
+    if (!text) return;
+
+    if (await deliver(user, text)) {
+        console.log(`Sent pregnancy update to user ${user.id}`);
+    }
+}
+
+async function sendDailyMessage(user, now) {
+    const briefing = await buildBriefing(user, now);
+    if (!briefing) return;
+
+    if (!await deliver(user, briefing.text)) return;
 
     await prisma.messageLog.create({
         data: { user_id: user.id, message_id: briefing.messageId }

@@ -1,4 +1,5 @@
 const { prisma } = require('../lib/prisma');
+const { buildPregnancyUpdate } = require('../lib/pregnancy');
 const { TODAY_YESTERDAY_ROW, OTHER_DATE_BUTTON } = require('./periodStart');
 
 const PREGNANCY_PAUSED_TEXT = "Pregnancy mode is on, so cycle tracking is paused. When you're ready to start again, send /resume.";
@@ -45,7 +46,7 @@ async function handlePregnancyCallback(bot, callbackQuery) {
     switch (action) {
         case 'pregnancy_ask': {
             await bot.answerCallbackQuery(callbackQuery.id);
-            await bot.sendMessage(chatId, "Congratulations! 🎉 Want me to switch to pregnancy mode? Daily cycle messages will pause until you tell me the first day of her next period.", {
+            await bot.sendMessage(chatId, "Congratulations! 🎉 Want me to switch to pregnancy mode? Daily cycle messages will pause, and instead I'll send a weekly update on how she and the baby are doing until you tell me the first day of her next period.", {
                 reply_markup: {
                     inline_keyboard: [[
                         { text: 'Yes, pause tracking', callback_data: 'pregnancy_confirm' },
@@ -56,16 +57,18 @@ async function handlePregnancyCallback(bot, callbackQuery) {
             return true;
         }
         case 'pregnancy_confirm': {
-            await prisma.user.update({
+            const user = await prisma.user.update({
                 where: { telegram_chat_id: chatId },
                 data: { pregnancy_mode: true }
             });
             await bot.answerCallbackQuery(callbackQuery.id, { text: 'Pregnancy mode on' });
-            await bot.sendMessage(chatId, "Pregnancy mode is on — I've paused your daily cycle messages. 💜\n\nWhen her periods return, tap the button below or send /resume and enter the first day of her period.", {
+            await bot.sendMessage(chatId, "Pregnancy mode is on — I've paused your daily cycle messages. 💜\n\nInstead you'll get a weekly update on her and the baby, with the due date worked out from the start of her last period.\n\nWhen her periods return, tap the button below or send /resume and enter the first day of her period.", {
                 reply_markup: {
                     inline_keyboard: [[{ text: 'Resume tracking', callback_data: 'resume_ask' }]]
                 }
             });
+            const update = buildPregnancyUpdate(user);
+            if (update) await bot.sendMessage(chatId, update);
             return true;
         }
         case 'pregnancy_cancel': {

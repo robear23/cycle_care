@@ -4,6 +4,7 @@ const { getUpcomingPhasesRanges, getPhaseRanges } = require('../lib/cycle');
 const { partnerName, cycleStatus, buildBriefing } = require('../lib/briefing');
 const { userToday, addDays, formatCalendarDate } = require('../lib/dates');
 const { parseCycleRange, CYCLE_RANGE_HINT } = require('./onboarding');
+const { buildPregnancyUpdate } = require('../lib/pregnancy');
 const { PREGNANCY_PAUSED_TEXT } = require('./pregnancy');
 const { TODAY_YESTERDAY_ROW, OTHER_DATE_BUTTON } = require('./periodStart');
 
@@ -31,6 +32,11 @@ async function handleUpdate(bot, msg) {
     await bot.sendMessage(chatId, `When did ${partnerName(user) || 'your partner'}'s new cycle start?`, opts);
 }
 
+// This week's pregnancy update, or the paused notice outside weeks 4–42.
+function pregnancyStatusText(user) {
+    return buildPregnancyUpdate(user) || PREGNANCY_PAUSED_TEXT;
+}
+
 async function handleToday(bot, msg) {
     const chatId = msg.chat.id.toString();
     const user = await prisma.user.findUnique({ where: { telegram_chat_id: chatId } });
@@ -41,7 +47,7 @@ async function handleToday(bot, msg) {
     }
 
     if (user.pregnancy_mode) {
-        await bot.sendMessage(chatId, PREGNANCY_PAUSED_TEXT);
+        await bot.sendMessage(chatId, pregnancyStatusText(user));
         return;
     }
 
@@ -59,7 +65,7 @@ async function handlePhase(bot, msg) {
     }
 
     if (user.pregnancy_mode) {
-        await bot.sendMessage(chatId, PREGNANCY_PAUSED_TEXT);
+        await bot.sendMessage(chatId, pregnancyStatusText(user));
         return;
     }
 
