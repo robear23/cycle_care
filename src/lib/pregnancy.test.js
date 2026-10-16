@@ -11,13 +11,8 @@ const user = (overrides) => ({
 });
 
 describe('estimateDueDate', () => {
-    test('is 280 days after the last period for a 28-day cycle', () => {
-        assert.strictEqual(estimateDueDate(new Date('2026-01-01'), 28).toISOString(), '2026-10-08T00:00:00.000Z');
-    });
-
-    test('shifts by the difference from a 28-day cycle', () => {
-        assert.strictEqual(estimateDueDate(new Date('2026-01-01'), 32).toISOString(), '2026-10-12T00:00:00.000Z');
-        assert.strictEqual(estimateDueDate(new Date('2026-01-01'), 25).toISOString(), '2026-10-05T00:00:00.000Z');
+    test('is 280 days after the first day of the last period', () => {
+        assert.strictEqual(estimateDueDate(new Date('2026-01-01')).toISOString(), '2026-10-08T00:00:00.000Z');
     });
 });
 
@@ -28,9 +23,11 @@ describe('pregnancyProgress', () => {
         assert.deepStrictEqual([progress.weeks, progress.days, progress.daysToGo], [12, 1, 195]);
     });
 
-    test('lands on 40 weeks exactly on the due date for a long cycle', () => {
-        const progress = pregnancyProgress(user({ cycle_length: 32 }), new Date('2026-10-12T12:00:00Z'));
-        assert.deepStrictEqual([progress.weeks, progress.days, progress.daysToGo], [40, 0, 0]);
+    test('ignores the usual cycle length', () => {
+        // 18 Sep with a 31-day cycle setting: still 4 weeks on 16 Oct, due 25 Jun.
+        const progress = pregnancyProgress(user({ cycle_start_date: new Date('2026-09-18'), cycle_length: 31 }), new Date('2026-10-16T08:00:00Z'));
+        assert.deepStrictEqual([progress.weeks, progress.days], [4, 0]);
+        assert.strictEqual(progress.dueDate.toISOString(), '2027-06-25T00:00:00.000Z');
     });
 
     test('uses the user\'s local date', () => {

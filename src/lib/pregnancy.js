@@ -3,7 +3,6 @@ const { partnerName } = require('./briefing');
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 const FULL_TERM_DAYS = 280;
-const STANDARD_CYCLE_LENGTH = 28;
 
 // Sizes are rough averages (crown-to-rump until week 20, crown-to-heel after).
 const WEEKS = {
@@ -50,27 +49,25 @@ const WEEKS = {
 };
 
 /**
- * Estimated due date from the first day of the last period before pregnancy
- * (Naegele's rule), shifted by how far the usual cycle is from 28 days.
+ * Estimated due date: 280 days after the first day of the last period before
+ * pregnancy (Naegele's rule).
  *
  * @param {Date} lastPeriodStart - Calendar date (UTC midnight)
- * @param {number} cycleLength - Usual cycle length in days
  * @returns {Date} calendar date
  */
-function estimateDueDate(lastPeriodStart, cycleLength = STANDARD_CYCLE_LENGTH) {
-    return addDays(lastPeriodStart, FULL_TERM_DAYS + (cycleLength - STANDARD_CYCLE_LENGTH));
+function estimateDueDate(lastPeriodStart) {
+    return addDays(lastPeriodStart, FULL_TERM_DAYS);
 }
 
 /**
  * How far along the pregnancy is on the user's local today. Pregnancy mode keeps
  * cycle_start_date frozen at the last period before pregnancy.
- * Weeks count back from the due date, so week 40 always lands on it.
  *
  * @returns {{ weeks: number, days: number, dueDate: Date, daysToGo: number }}
  *   weeks/days are completed weeks plus extra days; daysToGo is negative once overdue
  */
 function pregnancyProgress(user, now = new Date()) {
-    const dueDate = estimateDueDate(user.cycle_start_date, user.cycle_length);
+    const dueDate = estimateDueDate(user.cycle_start_date);
     const daysToGo = Math.round((dueDate - userToday(user.timezone, now)) / DAY_MS);
     const elapsed = FULL_TERM_DAYS - daysToGo;
     return { weeks: Math.floor(elapsed / 7), days: ((elapsed % 7) + 7) % 7, dueDate, daysToGo };
